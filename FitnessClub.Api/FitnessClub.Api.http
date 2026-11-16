@@ -1,0 +1,91 @@
+@baseUrl = http://localhost:5191/api
+
+### ===== Memberships =====
+
+### Усі абонементи
+GET {{baseUrl}}/memberships
+
+### Активні абонементи до 1000 грн, від найдорожчого
+GET {{baseUrl}}/memberships?isActive=true&maxPrice=1000&sortBy=price&desc=true
+
+### Один абонемент
+GET {{baseUrl}}/memberships/1
+
+### Створити абонемент
+POST {{baseUrl}}/memberships
+Content-Type: application/json
+
+{
+  "name": "Студентський",
+  "description": "Знижка для студентів",
+  "price": 700,
+  "durationDays": 30,
+  "isActive": true
+}
+
+### Повністю оновити абонемент
+PUT {{baseUrl}}/memberships/1
+Content-Type: application/json
+
+{
+  "name": "Разовий візит",
+  "description": "Одне відвідування залу",
+  "price": 250,
+  "durationDays": 1,
+  "isActive": true
+}
+
+### Деактивувати абонемент
+PATCH {{baseUrl}}/memberships/1/status
+Content-Type: application/json
+
+{
+  "isActive": false
+}
+
+### Видалити абонемент
+DELETE {{baseUrl}}/memberships/4
+
+### ===== Workouts =====
+
+### Розклад тренувань
+GET {{baseUrl}}/workouts
+
+### Тренування для початківців у понеділок
+GET {{baseUrl}}/workouts?day=Monday&level=Beginner
+
+### Одне тренування
+GET {{baseUrl}}/workouts/1
+
+### Створити тренування
+POST {{baseUrl}}/workouts
+Content-Type: application/json
+
+{
+  "name": "Зумба",
+  "description": "Танцювальне кардіо",
+  "trainerId": 2,
+  "dayOfWeek": "Saturday",
+  "startTime": "11:00",
+  "durationMinutes": 55,
+  "level": "Beginner",
+  "maxParticipants": 20
+}
+
+### Оновити тренування
+PUT {{baseUrl}}/workouts/1
+Content-Type: application/json
+
+{
+  "name": "Йога",
+  "description": "Хатха-йога",
+  "trainerId": 1,
+  "dayOfWeek": "Monday",
+  "startTime": "18:30",
+  "durationMinutes": 60,
+  "level": "Beginner",
+  "maxParticipants": 15
+}
+
+### Видалити тренування
+DELETE {{baseUrl}}/workouts/4
