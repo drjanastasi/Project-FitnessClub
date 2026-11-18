@@ -50,13 +50,15 @@
 | Метод | Маршрут | Опис | Коди відповідей |
 |---|---|---|---|
 | GET | `/api/memberships` | Список абонементів | 200, 400 |
-| GET | `/api/memberships/{id}` | Один абонемент | 200, 404 |
+| GET | `/api/memberships/{id}` | Один абонемент + тренування, що до нього входять | 200, 404 |
 | POST | `/api/memberships` | Створити абонемент | 201, 400, 409 |
 | PUT | `/api/memberships/{id}` | Повністю оновити | 200, 400, 404, 409 |
 | PATCH | `/api/memberships/{id}/status` | Активувати / деактивувати | 200, 400, 404 |
 | DELETE | `/api/memberships/{id}` | Видалити | 204, 404 |
+| POST | `/api/memberships/{id}/workouts/{workoutId}` | Додати тренування в абонемент | 200, 404, 409 |
+| DELETE | `/api/memberships/{id}/workouts/{workoutId}` | Прибрати тренування з абонемента | 204, 404 |
 
-Query-параметри для `GET /api/memberships`: `isActive`, `minPrice`, `maxPrice`, `search`, `sortBy` (`name` \| `price` \| `duration`), `desc`.
+Query-параметри для `GET /api/memberships`: `isActive`, `minPrice`, `maxPrice`, `search`, `workoutId` (абонементи, що включають тренування), `sortBy` (`name` \| `price` \| `duration`), `desc`.
 Приклад: `GET /api/memberships?isActive=true&maxPrice=1000&sortBy=price`
 
 ### Workouts — `/api/workouts`
@@ -64,13 +66,13 @@ Query-параметри для `GET /api/memberships`: `isActive`, `minPrice`, 
 | Метод | Маршрут | Опис | Коди відповідей |
 |---|---|---|---|
 | GET | `/api/workouts` | Розклад тренувань (пн → нд, за часом) | 200, 400 |
-| GET | `/api/workouts/{id}` | Одне тренування | 200, 404 |
+| GET | `/api/workouts/{id}` | Одне тренування + абонементи, до яких воно входить | 200, 404 |
 | POST | `/api/workouts` | Створити тренування | 201, 400 |
 | PUT | `/api/workouts/{id}` | Повністю оновити | 200, 400, 404 |
 | DELETE | `/api/workouts/{id}` | Видалити | 204, 404 |
 
-Query-параметри для `GET /api/workouts`: `day` (`Monday`…`Sunday`), `level` (`Beginner` \| `Intermediate` \| `Advanced`), `trainerId`, `search`.
-Приклад: `GET /api/workouts?day=Monday&level=Beginner`
+Query-параметри для `GET /api/workouts`: `day` (`Monday`…`Sunday`), `level` (`Beginner` \| `Intermediate` \| `Advanced`), `trainerId`, `membershipId` (тренування, що входять в абонемент), `search`, `sortBy` (`schedule` \| `name` \| `duration`), `desc`.
+Приклад: `GET /api/workouts?day=Monday&level=Beginner`, `GET /api/workouts?membershipId=3`
 
 Приклад тіла `POST /api/workouts`:
 
@@ -93,21 +95,112 @@ Query-параметри для `GET /api/workouts`: `day` (`Monday`…`Sunday`)
 - Неіснуючий `id` → **404**, дубль назви абонемента → **409**, успішне створення → **201** з заголовком `Location`, видалення → **204**.
 - Enum-и в JSON передаються рядками (`"Monday"`, `"Beginner"`).
 
+> **Етап 2** — дані зберігаються в реляційній базі даних **SQLite** через **Entity Framework Core** (Code First, міграції). Автентифікація з'явиться на наступних етапах.
+
+
+## База даних
+
+**СУБД:** SQLite — уся база зберігається в одному файлі `FitnessClub.Api/fitnessclub.db`, окремий сервер встановлювати не потрібно.
+**ORM:** Entity Framework Core 9 (підхід Code First: спочатку C#-класи, з них міграціями створюється база).
+
+Рядок підключення — в `FitnessClub.Api/appsettings.json`:
+
+```json
+"ConnectionStrings": { "FitnessClub": "Data Source=fitnessclub.db" }
+```
+
+### Модель даних
+
+```
+Memberships 1 ──── * MembershipWorkouts * ──── 1 Workouts
+                                                    │ *
+                                                    │
+                                                    1  Trainers (етап 2, інший учасник)
+```
+
+**Memberships** — абонементи
+
+| Поле | Тип | Обмеження |
+|---|---|---|
+| Id | int | PK |
+| Name | string | обов'язкове, ≤100, унікальне |
+| Description | string? | ≤500 |
+| Price | decimal (у SQLite — REAL) | обов'язкове |
+| DurationDays | int | обов'язкове |
+| IsActive | bool | обов'язкове |
+
+**Workouts** — тренування (разом з розкладом)
+
+| Поле | Тип | Обмеження |
+|---|---|---|
+| Id | int | PK |
+| Name | string | обов'язкове, ≤100 |
+| Description | string? | ≤500 |
+| TrainerId | int | обов'язкове; стане FK на Trainers |
+| DayOfWeek | DayOfWeek (int) | обов'язкове, індекс |
+| StartTime | TimeOnly | обов'язкове |
+| DurationMinutes | int | обов'язкове |
+| Level | enum → string | обов'язкове, ≤20 |
+| MaxParticipants | int | обов'язкове |
+
+**MembershipWorkouts** — проміжна таблиця, які тренування входять в абонемент
+
+| Поле | Тип | Обмеження |
+|---|---|---|
+| MembershipId | int | PK (складений), FK → Memberships, ON DELETE CASCADE |
+| WorkoutId | int | PK (складений), FK → Workouts, ON DELETE CASCADE |
+
+### Зв'язки
+
+- **Membership ↔ Workout — багато-до-багатьох** через `MembershipWorkouts`: один абонемент включає кілька тренувань, одне тренування доступне в кількох абонементах. Видалення абонемента чи тренування каскадно видаляє лише рядки зв'язку.
+- **Trainer → Workout — один-до-багатьох** (підготовлено в `WorkoutConfiguration`, вмикається разом із сутністю Trainer). `Restrict` — не можна видалити тренера, у якого є тренування.
+
+Конфігурація таблиць — через **Fluent API** у `Data/Configurations/*Configuration.cs`, валідація вхідних даних — через **Data Annotations** у DTO. Початкові дані додаються через `HasData` і потрапляють у базу міграцією.
+
+### Міграції
+
+Один раз встановити інструмент:
+
+```bash
+dotnet tool install --global dotnet-ef --version 9.*
+```
+
+Команди виконуються з кореня репозиторію:
+
+```bash
+# створити нову міграцію після зміни моделей
+dotnet ef migrations add <НазваМіграції> --project FitnessClub.Api
+
+# застосувати міграції до бази (створює fitnessclub.db, якщо її немає)
+dotnet ef database update --project FitnessClub.Api
+
+# переглянути список міграцій
+dotnet ef migrations list --project FitnessClub.Api
+```
+
+Крім того, під час запуску застосунку викликається `Database.Migrate()`, тому всі наявні міграції застосовуються автоматично.
+
+> Файл бази `*.db` не зберігається в Git — у кожного учасника він створюється локально з міграцій.
+
+
 ## Структура проєкту
 
 ```
 FitnessClub.sln
 FitnessClub.Api/
 ├── Controllers/     — REST-контролери (routing, HTTP-методи, status codes)
+├── Data/            — FitnessClubDbContext + Configurations/ (Fluent API)
+├── Migrations/      — міграції EF Core
 ├── DTOs/            — вхідні/вихідні моделі з валідацією
 ├── Mapping/         — перетворення Model ↔ DTO
 ├── Models/          — доменні сутності
-├── Repositories/    — сховища в пам'яті (інтерфейс + реалізація)
+├── Repositories/    — доступ до даних через EF Core (LINQ, async)
 ├── Program.cs       — налаштування сервісів, Swagger, CORS
 └── FitnessClub.Api.http — готові запити для перевірки
 ```
 
-Контролери залежать лише від інтерфейсів репозиторіїв (`IMembershipRepository`, `IWorkoutRepository`), тому на етапі 2 сховище в пам'яті замінюється реалізацією на EF Core без змін у контролерах.
+Контролери залежать лише від інтерфейсів репозиторіїв (`IMembershipRepository`, `IWorkoutRepository`). Репозиторії будують LINQ-запити (фільтрація, пошук, сортування, `Include` для пов'язаних даних), а EF Core перетворює їх на SQL. Усі операції з базою асинхронні: `ToListAsync`, `FirstOrDefaultAsync`, `AnyAsync`, `SaveChangesAsync`, `ExecuteDeleteAsync`. SQL-запити видно в консолі під час роботи.
+
 
 ## Запуск
 
@@ -124,3 +217,6 @@ dotnet run --project FitnessClub.Api --launch-profile http
 (корінь http://localhost:5191 теж перенаправляє на Swagger).
 
 Також можна надсилати запити з файлу `FitnessClub.Api/FitnessClub.Api.http` у Visual Studio / Rider / VS Code (розширення REST Client).
+
+
+
