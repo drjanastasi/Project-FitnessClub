@@ -6,90 +6,44 @@ using Microsoft.AspNetCore.Mvc;
 namespace FitnessClub.Api.Controllers;
 
 /// <summary>
-/// Абонементи фітнес-клубу.
+/// Абонементи фітнес-клубу та тренування, що до них входять.
 /// </summary>
 [ApiController]
 [Route("api/memberships")]
 [Produces("application/json")]
 public class MembershipsController : ControllerBase
 {
-    private readonly IMembershipRepository _repository;
+    private readonly IMembershipRepository _memberships;
+    private readonly IWorkoutRepository _workouts;
 
-    public MembershipsController(IMembershipRepository repository)
+    public MembershipsController(IMembershipRepository memberships, IWorkoutRepository workouts)
     {
-        _repository = repository;
+        _memberships = memberships;
+        _workouts = workouts;
     }
 
-    /// <summary>Отримати список абонементів з фільтрацією та сортуванням.</summary>
-    /// <param name="isActive">Лише активні (true) або неактивні (false) абонементи.</param>
-    /// <param name="minPrice">Мінімальна ціна.</param>
-    /// <param name="maxPrice">Максимальна ціна.</param>
-    /// <param name="search">Пошук за назвою або описом.</param>
-    /// <param name="sortBy">Поле сортування: name, price, duration.</param>
-    /// <param name="desc">Сортувати за спаданням.</param>
+    /// <summary>Отримати список абонементів з фільтрацією, пошуком і сортуванням.</summary>
+    /// <remarks>Приклад: GET /api/memberships?isActive=true&amp;maxPrice=1000&amp;sortBy=price&amp;desc=true</remarks>
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<MembershipDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    public ActionResult<IEnumerable<MembershipDto>> GetAll(
-        [FromQuery] bool? isActive,
-        [FromQuery] decimal? minPrice,
-        [FromQuery] decimal? maxPrice,
-        [FromQuery] string? search,
-        [FromQuery] string? sortBy,
-        [FromQuery] bool desc = false)
+    public async Task<ActionResult<IEnumerable<MembershipDto>>> GetAll([FromQuery] MembershipQueryParameters query)
     {
-        if (minPrice > maxPrice)
-        {
-            ModelState.AddModelError(nameof(minPrice), "minPrice не може бути більшим за maxPrice.");
-            return ValidationProblem(ModelState);
-        }
-
-        var query = _repository.GetAll().AsEnumerable();
-
-        if (isActive.HasValue)
-            query = query.Where(m => m.IsActive == isActive.Value);
-        if (minPrice.HasValue)
-            query = query.Where(m => m.Price >= minPrice.Value);
-        if (maxPrice.HasValue)
-            query = query.Where(m => m.Price <= maxPrice.Value);
-        if (!string.IsNullOrWhiteSpace(search))
-            query = query.Where(m =>
-                m.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                (m.Description?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false));
-
-        switch (sortBy?.ToLowerInvariant())
-        {
-            case null or "":
-                query = query.OrderBy(m => m.Id);
-                break;
-            case "name":
-                query = desc ? query.OrderByDescending(m => m.Name) : query.OrderBy(m => m.Name);
-                break;
-            case "price":
-                query = desc ? query.OrderByDescending(m => m.Price) : query.OrderBy(m => m.Price);
-                break;
-            case "duration":
-                query = desc ? query.OrderByDescending(m => m.DurationDays) : query.OrderBy(m => m.DurationDays);
-                break;
-            default:
-                ModelState.AddModelError(nameof(sortBy), "sortBy може бути лише: name, price, duration.");
-                return ValidationProblem(ModelState);
-        }
-
-        return Ok(query.Select(m => m.ToDto()));
+        var memberships = await _memberships.GetAllAsync(query);
+        return Ok(memberships.Select(m => m.ToDto()));
     }
 
-    /// <summary>Отримати абонемент за id.</summary>
+    /// <summary>Отримати абонемент за id разом зі списком тренувань, що до нього входять.</summary>
     [HttpGet("{id:int}")]
-    [ProducesResponseType(typeof(MembershipDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(MembershipDetailsDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public ActionResult<MembershipDto> GetById(int id)
+    public async Task<ActionResult<MembershipDetailsDto>> GetById(int id)
     {
-        var membership = _repository.GetById(id);
+        var membership = await _memberships.GetWithWorkoutsAsync(id);
         if (membership is null)
-            return Problem(statusCode: 404, title: $"Абонемент з id={id} не знайдено.");
+            return MembershipNotFound(id);
 
-        return Ok(membership.ToDto());
+        return Ok(membership.ToDetailsDto());
     }
 
     /// <summary>Створити новий абонемент.</summary>
@@ -98,14 +52,16 @@ public class MembershipsController : ControllerBase
     [ProducesResponseType(typeof(MembershipDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-    public ActionResult<MembershipDto> Create([FromBody] CreateMembershipDto dto)
+    public async Task<ActionResult<MembershipDto>> Create([FromBody] CreateMembershipDto dto)
     {
         // Невалідні DTO автоматично отримують 400 завдяки [ApiController].
-        if (_repository.NameExists(dto.Name))
+        if (await _memberships.NameExistsAsync(dto.Name))
             return Problem(statusCode: 409, title: $"Абонемент з назвою \"{dto.Name}\" вже існує.");
 
-        var created = _repository.Add(dto.ToModel());
-        return CreatedAtAction(nameof(GetById), new { id = created.Id }, created.ToDto());
+        var membership = dto.ToEntity();
+        await _memberships.AddAsync(membership);
+
+        return CreatedAtAction(nameof(GetById), new { id = membership.Id }, membership.ToDto());
     }
 
     /// <summary>Повністю оновити абонемент.</summary>
@@ -115,19 +71,19 @@ public class MembershipsController : ControllerBase
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-    public ActionResult<MembershipDto> Update(int id, [FromBody] UpdateMembershipDto dto)
+    public async Task<ActionResult<MembershipDto>> Update(int id, [FromBody] UpdateMembershipDto dto)
     {
-        if (_repository.GetById(id) is null)
-            return Problem(statusCode: 404, title: $"Абонемент з id={id} не знайдено.");
+        var membership = await _memberships.GetByIdAsync(id);
+        if (membership is null)
+            return MembershipNotFound(id);
 
-        if (_repository.NameExists(dto.Name, exceptId: id))
+        if (await _memberships.NameExistsAsync(dto.Name, exceptId: id))
             return Problem(statusCode: 409, title: $"Абонемент з назвою \"{dto.Name}\" вже існує.");
 
-        var updated = dto.ToModel();
-        updated.Id = id;
-        _repository.Update(updated);
+        dto.ApplyTo(membership);
+        await _memberships.SaveChangesAsync();
 
-        return Ok(updated.ToDto());
+        return Ok(membership.ToDto());
     }
 
     /// <summary>Активувати або деактивувати абонемент (часткове оновлення).</summary>
@@ -136,27 +92,68 @@ public class MembershipsController : ControllerBase
     [ProducesResponseType(typeof(MembershipDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public ActionResult<MembershipDto> UpdateStatus(int id, [FromBody] UpdateMembershipStatusDto dto)
+    public async Task<ActionResult<MembershipDto>> UpdateStatus(int id, [FromBody] UpdateMembershipStatusDto dto)
     {
-        var membership = _repository.GetById(id);
+        var membership = await _memberships.GetByIdAsync(id);
         if (membership is null)
-            return Problem(statusCode: 404, title: $"Абонемент з id={id} не знайдено.");
+            return MembershipNotFound(id);
 
         membership.IsActive = dto.IsActive!.Value;
-        _repository.Update(membership);
+        await _memberships.SaveChangesAsync();
 
         return Ok(membership.ToDto());
     }
 
-    /// <summary>Видалити абонемент.</summary>
+    /// <summary>Видалити абонемент (його зв'язки з тренуваннями видаляються каскадно).</summary>
     [HttpDelete("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public IActionResult Delete(int id)
+    public async Task<IActionResult> Delete(int id)
     {
-        if (!_repository.Delete(id))
-            return Problem(statusCode: 404, title: $"Абонемент з id={id} не знайдено.");
+        var membership = await _memberships.GetByIdAsync(id);
+        if (membership is null)
+            return MembershipNotFound(id);
+
+        await _memberships.DeleteAsync(membership);
+        return NoContent();
+    }
+
+    // ---------- Зв'язок абонемент ↔ тренування ----------
+
+    /// <summary>Додати тренування в абонемент.</summary>
+    [HttpPost("{id:int}/workouts/{workoutId:int}")]
+    [ProducesResponseType(typeof(MembershipDetailsDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<MembershipDetailsDto>> AddWorkout(int id, int workoutId)
+    {
+        if (!await _memberships.ExistsAsync(id))
+            return MembershipNotFound(id);
+
+        if (!await _workouts.ExistsAsync(workoutId))
+            return Problem(statusCode: 404, title: $"Тренування з id={workoutId} не знайдено.");
+
+        if (await _memberships.HasWorkoutAsync(id, workoutId))
+            return Problem(statusCode: 409, title: "Це тренування вже входить в абонемент.");
+
+        await _memberships.AddWorkoutAsync(id, workoutId);
+
+        var updated = await _memberships.GetWithWorkoutsAsync(id);
+        return Ok(updated!.ToDetailsDto());
+    }
+
+    /// <summary>Прибрати тренування з абонемента.</summary>
+    [HttpDelete("{id:int}/workouts/{workoutId:int}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RemoveWorkout(int id, int workoutId)
+    {
+        if (!await _memberships.RemoveWorkoutAsync(id, workoutId))
+            return Problem(statusCode: 404, title: "Таке тренування не входить в цей абонемент.");
 
         return NoContent();
     }
+
+    private ObjectResult MembershipNotFound(int id) =>
+        Problem(statusCode: 404, title: $"Абонемент з id={id} не знайдено.");
 }

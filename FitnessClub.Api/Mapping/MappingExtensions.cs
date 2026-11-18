@@ -6,40 +6,82 @@ using FitnessClub.Api.Models;
 namespace FitnessClub.Api.Mapping;
 
 /// <summary>
-/// Перетворення між моделями та DTO. Клієнт ніколи не працює з моделями напряму.
+/// Перетворення між сутностями та DTO. Клієнт ніколи не працює з сутностями напряму.
 /// </summary>
 public static class MappingExtensions
 {
+    private static string FormatTime(TimeOnly time) =>
+        time.ToString("HH:mm", CultureInfo.InvariantCulture);
+
     // ---------- Memberships ----------
 
     public static MembershipDto ToDto(this Membership m) =>
-        new(m.Id, m.Name, m.Description, m.Price, m.DurationDays, m.IsActive);
+        new(m.Id, m.Name, m.Description, m.Price, m.DurationDays, m.IsActive,
+            m.MembershipWorkouts.Count);
 
-    public static Membership ToModel(this CreateMembershipDto dto) => new()
+    /// <summary>Потребує завантажених MembershipWorkouts.Workout (Include/ThenInclude).</summary>
+    public static MembershipDetailsDto ToDetailsDto(this Membership m) =>
+        new(m.Id, m.Name, m.Description, m.Price, m.DurationDays, m.IsActive,
+            m.MembershipWorkouts
+                .Select(mw => mw.Workout)
+                .OrderBy(w => ((int)w.DayOfWeek + 6) % 7)
+                .ThenBy(w => w.StartTime)
+                .Select(w => w.ToShortDto())
+                .ToList());
+
+    public static Membership ToEntity(this CreateMembershipDto dto)
     {
-        Name = dto.Name.Trim(),
-        Description = dto.Description?.Trim(),
-        Price = dto.Price,
-        DurationDays = dto.DurationDays,
-        IsActive = dto.IsActive
-    };
+        var membership = new Membership();
+        dto.ApplyTo(membership);
+        return membership;
+    }
+
+    /// <summary>Переносить значення з DTO в існуючу сутність (для PUT).</summary>
+    public static void ApplyTo(this CreateMembershipDto dto, Membership m)
+    {
+        m.Name = dto.Name.Trim();
+        m.Description = dto.Description?.Trim();
+        m.Price = dto.Price;
+        m.DurationDays = dto.DurationDays;
+        m.IsActive = dto.IsActive;
+    }
 
     // ---------- Workouts ----------
 
     public static WorkoutDto ToDto(this Workout w) =>
         new(w.Id, w.Name, w.Description, w.TrainerId, w.DayOfWeek,
-            w.StartTime.ToString("HH:mm", CultureInfo.InvariantCulture),
-            w.DurationMinutes, w.Level, w.MaxParticipants);
+            FormatTime(w.StartTime), w.DurationMinutes, w.Level, w.MaxParticipants);
 
-    public static Workout ToModel(this CreateWorkoutDto dto) => new()
+    public static WorkoutShortDto ToShortDto(this Workout w) =>
+        new(w.Id, w.Name, w.DayOfWeek, FormatTime(w.StartTime), w.Level);
+
+    /// <summary>Потребує завантажених MembershipWorkouts.Membership (Include/ThenInclude).</summary>
+    public static WorkoutDetailsDto ToDetailsDto(this Workout w) =>
+        new(w.Id, w.Name, w.Description, w.TrainerId, w.DayOfWeek,
+            FormatTime(w.StartTime), w.DurationMinutes, w.Level, w.MaxParticipants,
+            w.MembershipWorkouts
+                .Select(mw => mw.Membership)
+                .OrderBy(m => m.Price)
+                .Select(m => new WorkoutMembershipDto(m.Id, m.Name, m.Price))
+                .ToList());
+
+    public static Workout ToEntity(this CreateWorkoutDto dto)
     {
-        Name = dto.Name.Trim(),
-        Description = dto.Description?.Trim(),
-        TrainerId = dto.TrainerId,
-        DayOfWeek = dto.DayOfWeek!.Value,
-        StartTime = TimeOnly.ParseExact(dto.StartTime, "HH:mm", CultureInfo.InvariantCulture),
-        DurationMinutes = dto.DurationMinutes,
-        Level = dto.Level!.Value,
-        MaxParticipants = dto.MaxParticipants
-    };
+        var workout = new Workout();
+        dto.ApplyTo(workout);
+        return workout;
+    }
+
+    /// <summary>Переносить значення з DTO в існуючу сутність (для PUT).</summary>
+    public static void ApplyTo(this CreateWorkoutDto dto, Workout w)
+    {
+        w.Name = dto.Name.Trim();
+        w.Description = dto.Description?.Trim();
+        w.TrainerId = dto.TrainerId;
+        w.DayOfWeek = dto.DayOfWeek!.Value;
+        w.StartTime = TimeOnly.ParseExact(dto.StartTime, "HH:mm", CultureInfo.InvariantCulture);
+        w.DurationMinutes = dto.DurationMinutes;
+        w.Level = dto.Level!.Value;
+        w.MaxParticipants = dto.MaxParticipants;
+    }
 }

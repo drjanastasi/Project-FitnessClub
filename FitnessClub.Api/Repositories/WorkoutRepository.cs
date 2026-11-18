@@ -1,66 +1,102 @@
+using FitnessClub.Api.Data;
+using FitnessClub.Api.DTOs.Workouts;
 using FitnessClub.Api.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace FitnessClub.Api.Repositories;
 
 public interface IWorkoutRepository
 {
-    IReadOnlyList<Workout> GetAll();
-    Workout? GetById(int id);
-    Workout Add(Workout workout);
-    bool Update(Workout workout);
-    bool Delete(int id);
+    Task<List<Workout>> GetAllAsync(WorkoutQueryParameters query);
+    Task<Workout?> GetByIdAsync(int id);
+    Task<Workout?> GetWithMembershipsAsync(int id);
+    Task<bool> ExistsAsync(int id);
+    Task AddAsync(Workout workout);
+    Task SaveChangesAsync();
+    Task DeleteAsync(Workout workout);
 }
 
 /// <summary>
-/// Зберігання тренувань у пам'яті (етап 1).
+/// Робота з тренуваннями через Entity Framework Core.
 /// </summary>
-public class InMemoryWorkoutRepository : IWorkoutRepository
+public class WorkoutRepository : IWorkoutRepository
 {
-    private readonly List<Workout> _items = new();
-    private readonly object _lock = new();
-    private int _nextId = 1;
+    private readonly FitnessClubDbContext _db;
 
-    public InMemoryWorkoutRepository()
+    public WorkoutRepository(FitnessClubDbContext db)
     {
-        Add(new Workout { Name = "Йога", Description = "Хатха-йога для розтяжки та розслаблення", TrainerId = 1, DayOfWeek = DayOfWeek.Monday, StartTime = new TimeOnly(18, 0), DurationMinutes = 60, Level = DifficultyLevel.Beginner, MaxParticipants = 15 });
-        Add(new Workout { Name = "Функціональний тренінг", Description = "Кругове тренування з власною вагою", TrainerId = 2, DayOfWeek = DayOfWeek.Tuesday, StartTime = new TimeOnly(19, 0), DurationMinutes = 45, Level = DifficultyLevel.Intermediate, MaxParticipants = 12 });
-        Add(new Workout { Name = "Пілатес", Description = "Зміцнення м'язів кору", TrainerId = 1, DayOfWeek = DayOfWeek.Wednesday, StartTime = new TimeOnly(9, 0), DurationMinutes = 50, Level = DifficultyLevel.Beginner, MaxParticipants = 10 });
-        Add(new Workout { Name = "Кросфіт", Description = "Високоінтенсивне тренування", TrainerId = 3, DayOfWeek = DayOfWeek.Friday, StartTime = new TimeOnly(20, 0), DurationMinutes = 60, Level = DifficultyLevel.Advanced, MaxParticipants = 8 });
+        _db = db;
     }
 
-    public IReadOnlyList<Workout> GetAll()
+    public async Task<List<Workout>> GetAllAsync(WorkoutQueryParameters q)
     {
-        lock (_lock) return _items.ToList();
-    }
+        IQueryable<Workout> query = _db.Workouts.AsNoTracking();
 
-    public Workout? GetById(int id)
-    {
-        lock (_lock) return _items.FirstOrDefault(w => w.Id == id);
-    }
+        // ----- Фільтрація -----
+        if (q.Day is DayOfWeek day)
+            query = query.Where(w => w.DayOfWeek == day);
 
-    public Workout Add(Workout workout)
-    {
-        lock (_lock)
+        if (q.Level is DifficultyLevel level)
+            query = query.Where(w => w.Level == level);
+
+        if (q.TrainerId is int trainerId)
+            query = query.Where(w => w.TrainerId == trainerId);
+
+        // Фільтр через зв'язок: тренування, що входять в абонемент.
+        if (q.MembershipId is int membershipId)
+            query = query.Where(w => w.MembershipWorkouts.Any(mw => mw.MembershipId == membershipId));
+
+        // ----- Пошук -----
+        if (!string.IsNullOrWhiteSpace(q.Search))
         {
-            workout.Id = _nextId++;
-            _items.Add(workout);
-            return workout;
+            var search = q.Search.Trim();
+            query = query.Where(w =>
+                w.Name.Contains(search) ||
+                (w.Description != null && w.Description.Contains(search)));
         }
-    }
 
-    public bool Update(Workout workout)
-    {
-        lock (_lock)
+        // ----- Сортування -----
+        // "schedule": понеділок → неділя, потім за часом.
+        // У .NET неділя = 0, тому (день + 6) % 7 робить понеділок першим.
+        query = q.SortBy?.ToLowerInvariant() switch
         {
-            var index = _items.FindIndex(w => w.Id == workout.Id);
-            if (index < 0) return false;
-            _items[index] = workout;
-            return true;
-        }
+            "name" => q.Desc ? query.OrderByDescending(w => w.Name) : query.OrderBy(w => w.Name),
+            "duration" => q.Desc ? query.OrderByDescending(w => w.DurationMinutes) : query.OrderBy(w => w.DurationMinutes),
+            _ => q.Desc
+                ? query.OrderByDescending(w => ((int)w.DayOfWeek + 6) % 7).ThenByDescending(w => w.StartTime)
+                : query.OrderBy(w => ((int)w.DayOfWeek + 6) % 7).ThenBy(w => w.StartTime)
+        };
+
+        return await query.ToListAsync();
     }
 
-    public bool Delete(int id)
+    /// <summary>Тренування для зміни (EF відстежує його).</summary>
+    public Task<Workout?> GetByIdAsync(int id) =>
+        _db.Workouts.FirstOrDefaultAsync(w => w.Id == id);
+
+    /// <summary>Тренування разом з абонементами, до яких воно входить.</summary>
+    public Task<Workout?> GetWithMembershipsAsync(int id) =>
+        _db.Workouts
+            .AsNoTracking()
+            .Include(w => w.MembershipWorkouts)
+                .ThenInclude(mw => mw.Membership)
+            .FirstOrDefaultAsync(w => w.Id == id);
+
+    public Task<bool> ExistsAsync(int id) =>
+        _db.Workouts.AnyAsync(w => w.Id == id);
+
+    public async Task AddAsync(Workout workout)
     {
-        lock (_lock) return _items.RemoveAll(w => w.Id == id) > 0;
+        _db.Workouts.Add(workout);
+        await _db.SaveChangesAsync();
+    }
+
+    public Task SaveChangesAsync() => _db.SaveChangesAsync();
+
+    public async Task DeleteAsync(Workout workout)
+    {
+        // Зв'язки з абонементами видаляться каскадно.
+        _db.Workouts.Remove(workout);
+        await _db.SaveChangesAsync();
     }
 }

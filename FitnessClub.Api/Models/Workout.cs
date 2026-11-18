@@ -4,9 +4,11 @@ namespace FitnessClub.Api.Models;
 /// Групове тренування. Містить і інформацію про розклад
 /// (день тижня + час початку), тому окремого ресурсу "Розклад" немає.
 /// Приклад: Йога — понеділок 18:00 — 60 хв — Beginner — до 15 людей.
+/// Таблиця: Workouts.
 /// </summary>
 public class Workout
 {
+    /// <summary>Первинний ключ.</summary>
     public int Id { get; set; }
 
     public string Name { get; set; } = string.Empty;
@@ -14,8 +16,8 @@ public class Workout
     public string? Description { get; set; }
 
     /// <summary>
-    /// Ідентифікатор тренера. На етапі 2 стане зовнішнім ключем
-    /// на ресурс Trainers (частина іншого учасника команди).
+    /// Ідентифікатор тренера. Коли в проєкті з'явиться сутність Trainer,
+    /// це поле стане зовнішнім ключем (див. WorkoutConfiguration).
     /// </summary>
     public int TrainerId { get; set; }
 
@@ -28,6 +30,9 @@ public class Workout
     public DifficultyLevel Level { get; set; }
 
     public int MaxParticipants { get; set; }
+
+    /// <summary>Абонементи, до яких входить це тренування.</summary>
+    public ICollection<MembershipWorkout> MembershipWorkouts { get; set; } = new List<MembershipWorkout>();
 }
 
 public enum DifficultyLevel
