@@ -23,6 +23,10 @@ builder.Services.AddDbContext<FitnessClubDbContext>(options =>
 builder.Services.AddScoped<IMembershipRepository, MembershipRepository>();
 builder.Services.AddScoped<IWorkoutRepository, WorkoutRepository>();
 
+// Клієнти та тренери поки зберігаються в пам'яті (Singleton) — до переходу на EF Core.
+builder.Services.AddSingleton<ITrainerRepository, InMemoryTrainerRepository>();
+builder.Services.AddSingleton<IMemberRepository, InMemoryMemberRepository>();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
