@@ -3,7 +3,7 @@ using FitnessClub.Api.Models;
 
 namespace FitnessClub.Api.DTOs.Workouts;
 
-/// <summary>Те, що API повертає клієнту.</summary>
+/// <summary>Тренування у списку / розкладі.</summary>
 public record WorkoutDto(
     int Id,
     string Name,
@@ -14,6 +14,30 @@ public record WorkoutDto(
     int DurationMinutes,
     DifficultyLevel Level,
     int MaxParticipants);
+
+/// <summary>Коротка інформація про тренування — для вкладених списків.</summary>
+public record WorkoutShortDto(
+    int Id,
+    string Name,
+    DayOfWeek DayOfWeek,
+    string StartTime,
+    DifficultyLevel Level);
+
+/// <summary>Абонемент, у який входить тренування (коротко).</summary>
+public record WorkoutMembershipDto(int Id, string Name, decimal Price);
+
+/// <summary>Одне тренування разом з абонементами, до яких воно входить.</summary>
+public record WorkoutDetailsDto(
+    int Id,
+    string Name,
+    string? Description,
+    int TrainerId,
+    DayOfWeek DayOfWeek,
+    string StartTime,
+    int DurationMinutes,
+    DifficultyLevel Level,
+    int MaxParticipants,
+    IReadOnlyList<WorkoutMembershipDto> Memberships);
 
 /// <summary>Тіло запиту POST /api/workouts.</summary>
 public class CreateWorkoutDto
@@ -51,4 +75,35 @@ public class CreateWorkoutDto
 /// <summary>Тіло запиту PUT /api/workouts/{id} — повне оновлення.</summary>
 public class UpdateWorkoutDto : CreateWorkoutDto
 {
+}
+
+/// <summary>
+/// Query-параметри для GET /api/workouts: фільтрація, пошук, сортування.
+/// </summary>
+public class WorkoutQueryParameters
+{
+    /// <summary>День тижня, наприклад Monday.</summary>
+    public DayOfWeek? Day { get; set; }
+
+    /// <summary>Рівень складності: Beginner, Intermediate, Advanced.</summary>
+    public DifficultyLevel? Level { get; set; }
+
+    /// <summary>Лише тренування цього тренера.</summary>
+    [Range(1, int.MaxValue)]
+    public int? TrainerId { get; set; }
+
+    /// <summary>Лише тренування, що входять в цей абонемент.</summary>
+    [Range(1, int.MaxValue)]
+    public int? MembershipId { get; set; }
+
+    /// <summary>Пошук за назвою або описом.</summary>
+    [StringLength(100)]
+    public string? Search { get; set; }
+
+    /// <summary>Сортування: schedule (за замовчуванням), name, duration.</summary>
+    [RegularExpression("^(?i)(schedule|name|duration)$", ErrorMessage = "sortBy може бути лише: schedule, name, duration.")]
+    public string? SortBy { get; set; }
+
+    /// <summary>Сортувати за спаданням.</summary>
+    public bool Desc { get; set; }
 }

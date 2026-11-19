@@ -1,27 +1,32 @@
 using System.Reflection;
 using System.Text.Json.Serialization;
+using FitnessClub.Api.Data;
 using FitnessClub.Api.Repositories;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// ---------- Services ----------
 
 builder.Services
     .AddControllers()
     .AddJsonOptions(options =>
     {
-        // Enum-и в JSON як рядки: "Monday", "Beginner" замість 1, 0.
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 
-// Сховища в пам'яті. Singleton — щоб дані жили, поки запущений застосунок.
-// Етап 2: замінити на реалізації з EF Core (AddScoped).
-builder.Services.AddSingleton<IMembershipRepository, InMemoryMembershipRepository>();
+var connectionString = builder.Configuration.GetConnectionString("FitnessClub")
+    ?? throw new InvalidOperationException("Не знайдено рядок підключення 'FitnessClub' в appsettings.json.");
+
+builder.Services.AddDbContext<FitnessClubDbContext>(options =>
+    options.UseSqlite(connectionString));
+
+builder.Services.AddScoped<IMembershipRepository, MembershipRepository>();
+builder.Services.AddScoped<IWorkoutRepository, WorkoutRepository>();
+
+// Клієнти та тренери поки зберігаються в пам'яті (Singleton) — до переходу на EF Core.
 builder.Services.AddSingleton<ITrainerRepository, InMemoryTrainerRepository>();
-builder.Services.AddSingleton<IWorkoutRepository, InMemoryWorkoutRepository>();
 builder.Services.AddSingleton<IMemberRepository, InMemoryMemberRepository>();
-// Дозволяємо фронтенду (інший порт) звертатися до API.
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
@@ -38,14 +43,22 @@ builder.Services.AddSwaggerGen(options =>
         Description = "REST API вебсайту фітнес-клубу: абонементи, тренування, клієнти, тренери, клуб, записи."
     });
 
-    // XML-коментарі контролерів → описи в Swagger.
     var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFile));
 });
 
 var app = builder.Build();
 
-// ---------- Pipeline ----------
+// Застосовуємо міграції під час запуску: якщо бази ще немає — вона створиться,
+// якщо з'явилися нові міграції — структура оновиться.
+// (Те саме робить команда `dotnet ef database update`.)
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<FitnessClubDbContext>();
+    db.Database.Migrate();
+}
+
+
 
 // Swagger увімкнено завжди, щоб зручно демонструвати API.
 app.UseSwagger();

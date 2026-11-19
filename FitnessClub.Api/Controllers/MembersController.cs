@@ -69,12 +69,13 @@ public class MembersController : ControllerBase
     [Consumes("application/json")]
     [ProducesResponseType(typeof(MemberDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-    public ActionResult<MemberDto> Create([FromBody] CreateMemberDto dto)
+    public async Task<ActionResult<MemberDto>> Create([FromBody] CreateMemberDto dto)
     {
         if (_repository.EmailExists(dto.Email))
             return Problem(statusCode: 409, title: "Клієнт з таким Email вже існує.");
 
-        if (_membershipRepository.GetById(dto.MembershipId) is null)
+        // Абонементи зберігаються в базі (EF Core), тому перевірка асинхронна.
+        if (!await _membershipRepository.ExistsAsync(dto.MembershipId))
             return Problem(statusCode: 400, title: "Вказаний абонемент не знайдено.");
 
         var created = _repository.Add(dto.ToModel());
@@ -91,7 +92,7 @@ public class MembersController : ControllerBase
     [ProducesResponseType(typeof(MemberDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-    public ActionResult<MemberDto> Update(int id, [FromBody] UpdateMemberDto dto)
+    public async Task<ActionResult<MemberDto>> Update(int id, [FromBody] UpdateMemberDto dto)
     {
         if (_repository.GetById(id) is null)
             return Problem(statusCode: 404, title: $"Клієнта з id={id} не знайдено.");
@@ -99,7 +100,8 @@ public class MembersController : ControllerBase
         if (_repository.EmailExists(dto.Email, exceptId: id))
             return Problem(statusCode: 409, title: "Клієнт з таким Email вже існує.");
 
-        if (_membershipRepository.GetById(dto.MembershipId) is null)
+        // Абонементи зберігаються в базі (EF Core), тому перевірка асинхронна.
+        if (!await _membershipRepository.ExistsAsync(dto.MembershipId))
             return Problem(statusCode: 400, title: "Вказаний абонемент не знайдено.");
 
         var updated = dto.ToModel();

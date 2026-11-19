@@ -8,8 +8,11 @@ GET {{baseUrl}}/memberships
 ### Активні абонементи до 1000 грн, від найдорожчого
 GET {{baseUrl}}/memberships?isActive=true&maxPrice=1000&sortBy=price&desc=true
 
-### Один абонемент
-GET {{baseUrl}}/memberships/1
+### Один абонемент + його тренування
+GET {{baseUrl}}/memberships/2
+
+### Абонементи, в які входить тренування 3 (Пілатес)
+GET {{baseUrl}}/memberships?workoutId=3
 
 ### Створити абонемент
 POST {{baseUrl}}/memberships
@@ -43,6 +46,12 @@ Content-Type: application/json
   "isActive": false
 }
 
+### Додати тренування 1 (Йога) в абонемент 3 (Ранковий)
+POST {{baseUrl}}/memberships/3/workouts/1
+
+### Прибрати тренування 1 з абонемента 3
+DELETE {{baseUrl}}/memberships/3/workouts/1
+
 ### Видалити абонемент
 DELETE {{baseUrl}}/memberships/4
 
@@ -54,7 +63,13 @@ GET {{baseUrl}}/workouts
 ### Тренування для початківців у понеділок
 GET {{baseUrl}}/workouts?day=Monday&level=Beginner
 
-### Одне тренування
+### Тренування, що входять в абонемент 3
+GET {{baseUrl}}/workouts?membershipId=3
+
+### Тренування за назвою, від найдовшого
+GET {{baseUrl}}/workouts?sortBy=duration&desc=true
+
+### Одне тренування + абонементи, до яких воно входить
 GET {{baseUrl}}/workouts/1
 
 ### Створити тренування
