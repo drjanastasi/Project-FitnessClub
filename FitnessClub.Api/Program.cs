@@ -18,8 +18,9 @@ builder.Services
 // Сховища в пам'яті. Singleton — щоб дані жили, поки запущений застосунок.
 // Етап 2: замінити на реалізації з EF Core (AddScoped).
 builder.Services.AddSingleton<IMembershipRepository, InMemoryMembershipRepository>();
+builder.Services.AddSingleton<ITrainerRepository, InMemoryTrainerRepository>();
 builder.Services.AddSingleton<IWorkoutRepository, InMemoryWorkoutRepository>();
-
+builder.Services.AddSingleton<IMemberRepository, InMemoryMemberRepository>();
 // Дозволяємо фронтенду (інший порт) звертатися до API.
 builder.Services.AddCors(options =>
 {

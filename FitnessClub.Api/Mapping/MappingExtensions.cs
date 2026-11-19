@@ -1,13 +1,12 @@
 using System.Globalization;
+using FitnessClub.Api.DTOs.Members;
 using FitnessClub.Api.DTOs.Memberships;
 using FitnessClub.Api.DTOs.Workouts;
+using FitnessClub.Api.DTOs.Trainers;
 using FitnessClub.Api.Models;
 
 namespace FitnessClub.Api.Mapping;
 
-/// <summary>
-/// Перетворення між моделями та DTO. Клієнт ніколи не працює з моделями напряму.
-/// </summary>
 public static class MappingExtensions
 {
     // ---------- Memberships ----------
@@ -41,5 +40,51 @@ public static class MappingExtensions
         DurationMinutes = dto.DurationMinutes,
         Level = dto.Level!.Value,
         MaxParticipants = dto.MaxParticipants
+    };
+
+    // ---------- Members ----------
+
+    public static MemberDto ToDto(this Member m) =>
+        new(
+            m.Id,
+            m.FirstName,
+            m.LastName,
+            m.Email,
+            m.Phone,
+            m.BirthDate,
+            m.IsActive,
+            m.MembershipId);
+
+    public static Member ToModel(this CreateMemberDto dto) => new()
+    {
+        FirstName = dto.FirstName.Trim(),
+        LastName = dto.LastName.Trim(),
+        Email = dto.Email.Trim(),
+        Phone = dto.Phone.Trim(),
+        BirthDate = dto.BirthDate!.Value,
+        IsActive = dto.IsActive,
+        MembershipId = dto.MembershipId
+    };
+
+    // ---------- Trainers ----------
+
+    public static TrainerDto ToDto(this Trainer t) =>
+        new(
+            t.Id,
+            t.FirstName,
+            t.LastName,
+            t.Email,
+            t.Phone,
+            t.Specialization,
+            t.Experience);
+
+    public static Trainer ToModel(this CreateTrainerDto dto) => new()
+    {
+        FirstName = dto.FirstName.Trim(),
+        LastName = dto.LastName.Trim(),
+        Email = dto.Email.Trim(),
+        Phone = dto.Phone.Trim(),
+        Specialization = dto.Specialization.Trim(),
+        Experience = dto.Experience
     };
 }
