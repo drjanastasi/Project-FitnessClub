@@ -104,3 +104,58 @@ Content-Type: application/json
 
 ### Видалити тренування
 DELETE {{baseUrl}}/workouts/4
+
+### ===== Етап 4: автентифікація та ролі =====
+
+### Реєстрація нового користувача (роль User) → 201 + token
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "anna@example.com",
+  "password": "Anna2026",
+  "firstName": "Анна",
+  "lastName": "Коваль"
+}
+
+### Вхід адміністратора → 200 + token
+# @name adminLogin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@fitnessclub.ua",
+  "password": "Admin123!"
+}
+
+### Профіль поточного користувача
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{adminLogin.response.body.token}}
+
+### Без токена → 401
+POST {{baseUrl}}/memberships
+Content-Type: application/json
+
+{
+  "name": "Вечірній",
+  "price": 900,
+  "durationDays": 30
+}
+
+### З токеном адміністратора → 201
+POST {{baseUrl}}/memberships
+Authorization: Bearer {{adminLogin.response.body.token}}
+Content-Type: application/json
+
+{
+  "name": "Вечірній",
+  "price": 900,
+  "durationDays": 30
+}
+
+### Список користувачів (лише Administrator)
+GET {{baseUrl}}/users
+Authorization: Bearer {{adminLogin.response.body.token}}
+
+### Демонстрація життєвих циклів DI (виконати двічі)
+GET {{baseUrl}}/diagnostics/lifetimes
