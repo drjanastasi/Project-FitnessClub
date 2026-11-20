@@ -1,9 +1,10 @@
-using System.Globalization;
+using FitnessClub.Api.DTOs.Clubs;
 using FitnessClub.Api.DTOs.Members;
 using FitnessClub.Api.DTOs.Memberships;
-using FitnessClub.Api.DTOs.Workouts;
 using FitnessClub.Api.DTOs.Trainers;
+using FitnessClub.Api.DTOs.Workouts;
 using FitnessClub.Api.Models;
+using System.Globalization;
 
 namespace FitnessClub.Api.Mapping;
 
@@ -123,4 +124,26 @@ public static class MappingExtensions
         Specialization = dto.Specialization.Trim(),
         Experience = dto.Experience
     };
+
+    // ---------- Clubs ----------
+
+    public static ClubDto ToDto(this Club c) =>
+        new(c.Id, c.Name, c.Description, c.Address, c.Phone, c.Email, c.WorkHours);
+
+    public static Club ToEntity(this CreateClubDto dto)
+    {
+        var club = new Club();
+        dto.ApplyTo(club);
+        return club;
+    }
+
+    public static void ApplyTo(this CreateClubDto dto, Club c)
+    {
+        c.Name = dto.Name.Trim();
+        c.Description = dto.Description?.Trim();
+        c.Address = dto.Address.Trim();
+        c.Phone = dto.Phone.Trim();
+        c.Email = dto.Email.Trim();
+        c.WorkHours = dto.WorkHours?.Trim();
+    }
 }

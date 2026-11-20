@@ -40,6 +40,7 @@ builder.Services.AddScoped<IMembershipRepository, MembershipRepository>();
 builder.Services.AddScoped<IWorkoutRepository, WorkoutRepository>();
 builder.Services.AddSingleton<ITrainerRepository, InMemoryTrainerRepository>();
 builder.Services.AddSingleton<IMemberRepository, InMemoryMemberRepository>();
+builder.Services.AddScoped<IClubRepository, ClubRepository>();
 
 builder.Services.AddCors(options =>
 {
