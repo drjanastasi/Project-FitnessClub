@@ -1,5 +1,4 @@
 namespace FitnessClub.Api.Exceptions;
-
 public abstract class AppException : Exception
 {
     public int StatusCode { get; }
@@ -9,7 +8,6 @@ public abstract class AppException : Exception
         StatusCode = statusCode;
     }
 }
-
 public class NotFoundException : AppException
 {
     public NotFoundException(string message)
@@ -17,7 +15,6 @@ public class NotFoundException : AppException
     {
     }
 }
-
 public class ConflictException : AppException
 {
     public ConflictException(string message)
@@ -25,11 +22,17 @@ public class ConflictException : AppException
     {
     }
 }
-
 public class BadRequestException : AppException
 {
     public BadRequestException(string message)
         : base(StatusCodes.Status400BadRequest, message)
+    {
+    }
+}
+public class UnauthorizedException : AppException
+{
+    public UnauthorizedException(string message)
+        : base(StatusCodes.Status401Unauthorized, message)
     {
     }
 }

@@ -230,25 +230,152 @@ dotnet ef migrations list --project FitnessClub.Api
 
 Для демонстрації помилки 500 у режимі Development є endpoint `GET /api/diagnostics/error`.
 
+> **Етап 4** — архітектура з розділенням відповідальності (Controllers → Services → Repositories), Dependency Injection з різними життєвими циклами, ASP.NET Core Identity, JWT, ролі та захищені endpoints.
+
+## Архітектура
+
+```
+HTTP-запит
+   │
+   ▼
+Middleware (логування, обробка помилок, автентифікація, авторизація)
+   │
+   ▼
+Controllers   — лише HTTP: маршрути, коди відповідей, [Authorize]
+   │
+   ▼
+Services      — бізнес-логіка: правила, перевірки, перетворення в DTO
+   │
+   ▼
+Repositories  — доступ до даних (LINQ → EF Core → SQLite)
+   │
+   ▼
+Data          — FitnessClubDbContext, Unit of Work, міграції
+```
+
+Кожен шар знає лише про інтерфейси наступного шару (`IMembershipService`, `IMembershipRepository` тощо), а конкретні реалізації підставляє контейнер Dependency Injection.
+
+| Шар | Компоненти |
+|---|---|
+| Controllers | `MembershipsController`, `WorkoutsController`, `AuthController`, `UsersController`, `DiagnosticsController` |
+| Services | `MembershipService`, `WorkoutService`, `WorkoutScheduleValidator`, `AuthService`, `JwtTokenService`, `SystemDateTimeProvider` |
+| Repositories | `MembershipRepository`, `WorkoutRepository` (EF Core); `InMemoryTrainerRepository`, `InMemoryMemberRepository` |
+| Models / Entities | `Membership`, `Workout`, `MembershipWorkout`, `Member`, `Trainer`, `AppUser` |
+| DTO | `DTOs/Memberships`, `DTOs/Workouts`, `DTOs/Members`, `DTOs/Trainers`, `DTOs/Auth` |
+| Data / Infrastructure | `FitnessClubDbContext`, `UnitOfWork`, `IdentitySeeder`, `Configuraitons/`, `Migrations/`, `Extensions/`, `Middleware/` |
+
+## Dependency Injection
+
+Усі залежності реєструються в `Extensions/ServiceCollectionExtensions.cs`, а `Program.cs` лише викликає `AddDatabase`, `AddApplicationServices`, `AddIdentityAndJwt`, `AddSwaggerWithJwt`. Класи отримують залежності через конструктор і не створюють їх самі через `new`.
+
+| Компонент | Життєвий цикл | Чому |
+|---|---|---|
+| `FitnessClubDbContext` | **Scoped** | Один контекст на HTTP-запит: відстежує зміни лише цього запиту, не потокобезпечний |
+| `IUnitOfWork`, репозиторії EF Core | **Scoped** | Працюють із DbContext, тому живуть стільки ж, скільки він |
+| `IMembershipService`, `IWorkoutService`, `IAuthService` | **Scoped** | Залежать від Scoped-репозиторіїв і `UserManager` |
+| `IWorkoutScheduleValidator` | **Transient** | Легкий, без власного стану — новий екземпляр на кожне використання |
+| `ITokenService` (`JwtTokenService`) | **Singleton** | Без стану між запитами, лише читає налаштування JWT; ключ підпису створюється один раз |
+| `IDateTimeProvider` | **Singleton** | Без стану, один на весь застосунок |
+| `ITrainerRepository`, `IMemberRepository` (у пам'яті) | **Singleton** | Дані у списку мають жити, поки працює застосунок |
+
+Правило, якого дотримано: компонент не залежить від компонента з коротшим життєвим циклом (Singleton не отримує Scoped), інакше DbContext «застряг» би між запитами. У режимі Development ASP.NET Core сам перевіряє це під час запуску.
+
+Демонстрація: `GET /api/diagnostics/lifetimes` двічі отримує з DI кожен тип і показує Id екземплярів — Transient щоразу різний, Scoped однаковий у межах запиту і новий у наступному, Singleton завжди той самий.
+
+### SOLID, DRY, KISS
+
+- **S** — один клас, одна відповідальність: контролер — HTTP, сервіс — бізнес-логіка, репозиторій — дані, `WorkoutScheduleValidator` — лише правила розкладу, `JwtTokenService` — лише створення токена.
+- **O** — нові правила розкладу додаються у валідатор, контролери та репозиторії при цьому не змінюються.
+- **L** — будь-яку реалізацію інтерфейсу (наприклад, `InMemoryTrainerRepository` → майбутня EF-версія) можна підставити без змін у сервісах.
+- **I** — невеликі інтерфейси під конкретне завдання: `ITokenService`, `IDateTimeProvider`, `IWorkoutScheduleValidator`.
+- **D** — сервіси залежать від абстракцій (`IMembershipRepository`, `ITokenService`), а не від конкретних класів; навіть поточний час — через `IDateTimeProvider`.
+- **DRY** — назви ролей і політик — константи (`Roles`, `Policies`), спільні перевірки — в одному методі сервісу, формування помилок — в одному middleware.
+- **KISS** — без зайвих шарів: Unit of Work використано лише там, де потрібна транзакція.
+
+### Unit of Work
+
+`IUnitOfWork.ExecuteInTransactionAsync` виконує кілька операцій як одну транзакцію. Використовується під час **реєстрації** (створення облікового запису + призначення ролі User) і **зміни ролі**: якщо друга дія не вдасться, перша буде скасована, і в базі не залишиться користувача без ролі.
+
+### HttpClientFactory
+
+Зовнішній HTTP-сервіс у предметній області фітнес-клубу на цьому етапі не потрібен, тому `HttpClientFactory` не використовується (за методичкою — «якщо це відповідає предметній області»).
+
+## Автентифікація та авторизація
+
+**ASP.NET Core Identity** зберігає користувачів і ролі в тій самій базі SQLite (таблиці `AspNetUsers`, `AspNetRoles`, `AspNetUserRoles` …). Паролі зберігаються лише у вигляді хешу.
+
+**JWT**: після реєстрації або входу сервер повертає підписаний токен (HMAC-SHA256). Клієнт передає його в кожному запиті до захищених endpoints у заголовку `Authorization: Bearer <токен>`. Сервер перевіряє підпис, видавця, аудиторію і термін дії.
+
+Налаштування — розділ `Jwt` в `appsettings.json` (`Issuer`, `Audience`, `Key`, `ExpiresMinutes`).
+
+### Ролі
+
+| Роль | Хто | Що може |
+|---|---|---|
+| `User` | кожен зареєстрований користувач | переглядати дані, свій профіль `GET /api/auth/me` |
+| `Administrator` | адміністратор клубу | усе, що User, + створювати/змінювати/видаляти абонементи й тренування, керувати користувачами |
+
+Під час першого запуску автоматично створюються обидві ролі та адміністратор з розділу `AdminUser` в `appsettings.json`:
+
+- email: `admin@fitnessclub.ua`
+- пароль: `Admin123!`
+
+Політики авторизації (`Auth/AuthConstants.cs`): `AdminOnly` — лише Administrator; `MemberOrAdmin` — User або Administrator.
+
+### Як отримати JWT
+
+1. Зареєструватися: `POST /api/auth/register` → у відповіді одразу є `token`.
+   Або увійти: `POST /api/auth/login` з email і паролем.
+2. Скопіювати значення `token` з відповіді.
+3. У Swagger натиснути **Authorize** (замок угорі сторінки), вставити токен (без слова `Bearer`) → **Authorize**.
+4. Тепер Swagger додає заголовок `Authorization` до всіх запитів. Токен дійсний 60 хвилин.
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "tokenType": "Bearer",
+  "expiresAt": "2026-11-20T20:40:00Z",
+  "user": { "id": "…", "email": "admin@fitnessclub.ua", "firstName": "Адміністратор", "lastName": "Клубу", "roles": ["Administrator", "User"] }
+}
+```
+
+### Доступ до endpoints
+
+| Endpoint | Без входу | User | Administrator |
+|---|---|---|---|
+| `POST /api/auth/register`, `POST /api/auth/login` | ✅ | ✅ | ✅ |
+| `GET /api/auth/me` | 401 | ✅ | ✅ |
+| `GET /api/memberships`, `GET /api/memberships/{id}` | ✅ | ✅ | ✅ |
+| `GET /api/workouts`, `/schedule`, `/{id}` | ✅ | ✅ | ✅ |
+| `POST/PUT/PATCH/DELETE /api/memberships…` | 401 | 403 | ✅ |
+| `POST/PUT/DELETE /api/workouts…` | 401 | 403 | ✅ |
+| `GET /api/users`, `PUT /api/users/{id}/role` | 401 | 403 | ✅ |
+
+**401 Unauthorized** — токен не передано або він недійсний; **403 Forbidden** — токен дійсний, але роль не дозволяє операцію. Обидві відповіді — у форматі ProblemDetails.
+
 ## Структура проєкту
 
 ```
 FitnessClub.sln
 FitnessClub.Api/
-├── Controllers/     — REST-контролери (routing, HTTP-методи, status codes)
-├── Data/            — FitnessClubDbContext + Configuraitons/ (Fluent API)
+├── Auth/            — ролі, політики, налаштування JWT, українські помилки Identity
+├── Controllers/     — REST-контролери: лише HTTP, маршрути, [Authorize]
+├── Data/            — FitnessClubDbContext (+ Identity), UnitOfWork, IdentitySeeder, Configuraitons/ (Fluent API)
+├── Diagnostics/     — класи для демонстрації життєвих циклів DI
 ├── Migrations/      — міграції EF Core
 ├── DTOs/            — вхідні/вихідні моделі з валідацією
-├── Exceptions/      — власні винятки (NotFound, Conflict, BadRequest)
+├── Exceptions/      — власні винятки (NotFound, Conflict, BadRequest, Unauthorized)
+├── Extensions/      — реєстрація залежностей (DI), Identity, JWT, Swagger
 ├── Mapping/         — перетворення Model ↔ DTO
 ├── Middleware/      — логування запитів і централізована обробка помилок
-├── Models/          — доменні сутності
+├── Models/          — доменні сутності + AppUser (користувач Identity)
 ├── Repositories/    — доступ до даних (абонементи й тренування — EF Core, клієнти й тренери — поки в пам'яті)
-├── Program.cs       — налаштування сервісів, конвеєр middleware, Swagger, CORS
+├── Services/        — бізнес-логіка (Service Layer) та їхні інтерфейси
+├── Program.cs       — збирання застосунку й конвеєр middleware
 └── FitnessClub.Api.http — готові запити для перевірки
 ```
 
-Контролери залежать лише від інтерфейсів репозиторіїв (`IMembershipRepository`, `IWorkoutRepository`). Репозиторії будують LINQ-запити (фільтрація, пошук, сортування, `Include` для пов'язаних даних), а EF Core перетворює їх на SQL. Усі операції з базою асинхронні: `ToListAsync`, `FirstOrDefaultAsync`, `AnyAsync`, `SaveChangesAsync`, `ExecuteDeleteAsync`. SQL-запити видно в консолі під час роботи.
+Контролери залежать лише від інтерфейсів сервісів (`IMembershipService`, `IWorkoutService`, `IAuthService`), сервіси — від інтерфейсів репозиторіїв. Репозиторії будують LINQ-запити (фільтрація, пошук, сортування, `Include` для пов'язаних даних), а EF Core перетворює їх на SQL. Усі операції з базою асинхронні: `ToListAsync`, `FirstOrDefaultAsync`, `AnyAsync`, `SaveChangesAsync`, `ExecuteDeleteAsync`. SQL-запити видно в консолі під час роботи.
 
 
 ## Запуск
@@ -259,8 +386,12 @@ FitnessClub.Api/
 git clone <посилання-на-репозиторій>
 cd FitnessClub
 dotnet restore
+dotnet tool install --global dotnet-ef --version 9.*
+dotnet ef database update --project FitnessClub.Api
 dotnet run --project FitnessClub.Api --launch-profile http
 ```
+
+Під час першого запуску створюються ролі та адміністратор (`admin@fitnessclub.ua` / `Admin123!`).
 
 Після запуску відкрийте **Swagger UI**: http://localhost:5191/swagger
 (корінь http://localhost:5191 теж перенаправляє на Swagger).
