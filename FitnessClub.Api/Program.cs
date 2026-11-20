@@ -1,7 +1,9 @@
 using System.Reflection;
 using System.Text.Json.Serialization;
 using FitnessClub.Api.Data;
+using FitnessClub.Api.Middleware;
 using FitnessClub.Api.Repositories;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 
@@ -12,6 +14,20 @@ builder.Services
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    })
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var problem = new ValidationProblemDetails(context.ModelState)
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Title = "Вхідні дані не пройшли валідацію.",
+                Instance = context.HttpContext.Request.Path
+            };
+            problem.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
+            return new BadRequestObjectResult(problem);
+        };
     });
 
 var connectionString = builder.Configuration.GetConnectionString("FitnessClub")
@@ -22,8 +38,6 @@ builder.Services.AddDbContext<FitnessClubDbContext>(options =>
 
 builder.Services.AddScoped<IMembershipRepository, MembershipRepository>();
 builder.Services.AddScoped<IWorkoutRepository, WorkoutRepository>();
-
-// Клієнти та тренери поки зберігаються в пам'яті (Singleton) — до переходу на EF Core.
 builder.Services.AddSingleton<ITrainerRepository, InMemoryTrainerRepository>();
 builder.Services.AddSingleton<IMemberRepository, InMemoryMemberRepository>();
 
@@ -42,36 +56,27 @@ builder.Services.AddSwaggerGen(options =>
         Version = "v1",
         Description = "REST API вебсайту фітнес-клубу: абонементи, тренування, клієнти, тренери, клуб, записи."
     });
-
     var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFile));
 });
 
 var app = builder.Build();
 
-// Застосовуємо міграції під час запуску: якщо бази ще немає — вона створиться,
-// якщо з'явилися нові міграції — структура оновиться.
-// (Те саме робить команда `dotnet ef database update`.)
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<FitnessClubDbContext>();
     db.Database.Migrate();
 }
 
-
-
-// Swagger увімкнено завжди, щоб зручно демонструвати API.
+app.UseRequestLogging();
+app.UseExceptionHandling();
 app.UseSwagger();
 app.UseSwaggerUI(options =>
 {
     options.SwaggerEndpoint("/swagger/v1/swagger.json", "Fitness Club API v1");
 });
-
 app.UseCors("Frontend");
 app.UseAuthorization();
 app.MapControllers();
-
-// Корінь сайту одразу веде на Swagger.
 app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
-
 app.Run();

@@ -89,6 +89,16 @@ Query-параметри для `GET /api/workouts`: `day` (`Monday`…`Sunday`)
 }
 ```
 
+
+Query-параметри для `GET /api/workouts/schedule`: `level`, `trainerId`, `membershipId`, `includeEmptyDays` (за замовчуванням `true` — усі 7 днів).
+Приклад: `GET /api/workouts/schedule?level=Beginner&includeEmptyDays=false`
+
+**Правила розкладу** (перевіряються під час `POST` і `PUT`):
+- тренер з `trainerId` має існувати → інакше **400**;
+- тренування має закінчитися до 24:00 того ж дня → інакше **400**;
+- у тренера не може бути двох тренувань, що перетинаються за часом у той самий день → інакше **409**
+  (наприклад, Йога 18:00–19:00 і Стретчинг о 18:30 у того самого тренера).
+
 ### Валідація та помилки
 
 - Вхідні дані приходять у **DTO** з атрибутами валідації (`[Required]`, `[StringLength]`, `[Range]`, `[RegularExpression]`). Невалідний запит автоматично отримує **400** з переліком помилок (`ValidationProblemDetails`).
@@ -183,19 +193,58 @@ dotnet ef migrations list --project FitnessClub.Api
 > Файл бази `*.db` не зберігається в Git — у кожного учасника він створюється локально з міграцій.
 
 
+> **Етап 3** — повноцінний REST API: єдиний формат помилок, власні middleware для централізованої обробки винятків і логування запитів, бізнес-правила розкладу, документація Swagger/OpenAPI.
+
+## Обробка помилок
+
+Усі помилки повертаються в єдиному форматі **ProblemDetails**:
+
+```json
+{
+  "title": "Тренер уже веде тренування «Йога» у цей день 18:00–19:00. Час тренувань не може перетинатися.",
+  "status": 409,
+  "instance": "/api/workouts",
+  "traceId": "0HNQ6HOPUQUTF:00000001"
+}
+```
+
+| Ситуація | Код | Хто обробляє |
+|---|---|---|
+| Невалідні дані в DTO або query-параметрах | **400** | `[ApiController]` + `InvalidModelStateResponseFactory` (поле `errors` зі списком помилок) |
+| Порушення бізнес-правил у даних (тренера не існує тощо) | **400** | `BadRequestException` → middleware |
+| Ресурс не знайдено | **404** | `NotFoundException` → middleware |
+| Конфлікт даних (дублікат назви, перетин розкладу, зв'язок уже існує, порушення обмежень БД) | **409** | `ConflictException` / `DbUpdateException` → middleware |
+| Непередбачена помилка | **500** | middleware: клієнт бачить лише загальне повідомлення і `traceId`, деталі — тільки в лозі сервера |
+
+Успішні відповіді: **200** — отримано/оновлено, **201** — створено (із заголовком `Location`), **204** — видалено.
+
+## Middleware
+
+Власні middleware в папці `Middleware/`, підключені в `Program.cs` на початку конвеєра:
+
+1. **`RequestLoggingMiddleware`** — логує кожен запит: метод, шлях, параметри, status code, час обробки.
+   Приклад: `HTTP GET /api/workouts?day=Monday → 200 за 6 мс`
+2. **`ExceptionHandlingMiddleware`** — централізована обробка винятків. Перехоплює всі необроблені винятки з контролерів, репозиторіїв і EF Core, обирає status code за типом винятку, повертає `ProblemDetails` і не розкриває клієнту внутрішню інформацію (текст винятку, stack trace). Повні деталі записуються в лог разом з `traceId`.
+
+Контролери абонементів і тренувань не формують відповіді з помилками вручну: вони кидають `NotFoundException` / `ConflictException` / `BadRequestException` (папка `Exceptions/`), а відповідь формує middleware.
+
+Для демонстрації помилки 500 у режимі Development є endpoint `GET /api/diagnostics/error`.
+
 ## Структура проєкту
 
 ```
 FitnessClub.sln
 FitnessClub.Api/
 ├── Controllers/     — REST-контролери (routing, HTTP-методи, status codes)
-├── Data/            — FitnessClubDbContext + Configurations/ (Fluent API)
+├── Data/            — FitnessClubDbContext + Configuraitons/ (Fluent API)
 ├── Migrations/      — міграції EF Core
 ├── DTOs/            — вхідні/вихідні моделі з валідацією
+├── Exceptions/      — власні винятки (NotFound, Conflict, BadRequest)
 ├── Mapping/         — перетворення Model ↔ DTO
+├── Middleware/      — логування запитів і централізована обробка помилок
 ├── Models/          — доменні сутності
-├── Repositories/    — доступ до даних через EF Core (LINQ, async)
-├── Program.cs       — налаштування сервісів, Swagger, CORS
+├── Repositories/    — доступ до даних (абонементи й тренування — EF Core, клієнти й тренери — поки в пам'яті)
+├── Program.cs       — налаштування сервісів, конвеєр middleware, Swagger, CORS
 └── FitnessClub.Api.http — готові запити для перевірки
 ```
 

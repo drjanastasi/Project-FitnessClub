@@ -7,9 +7,6 @@ using FitnessClub.Api.Models;
 
 namespace FitnessClub.Api.Mapping;
 
-/// <summary>
-/// Перетворення між сутностями та DTO. Клієнт ніколи не працює з сутностями напряму.
-/// </summary>
 public static class MappingExtensions
 {
     private static string FormatTime(TimeOnly time) =>
@@ -20,8 +17,6 @@ public static class MappingExtensions
     public static MembershipDto ToDto(this Membership m) =>
         new(m.Id, m.Name, m.Description, m.Price, m.DurationDays, m.IsActive,
             m.MembershipWorkouts.Count);
-
-    /// <summary>Потребує завантажених MembershipWorkouts.Workout (Include/ThenInclude).</summary>
     public static MembershipDetailsDto ToDetailsDto(this Membership m) =>
         new(m.Id, m.Name, m.Description, m.Price, m.DurationDays, m.IsActive,
             m.MembershipWorkouts
@@ -38,7 +33,6 @@ public static class MappingExtensions
         return membership;
     }
 
-    /// <summary>Переносить значення з DTO в існуючу сутність (для PUT).</summary>
     public static void ApplyTo(this CreateMembershipDto dto, Membership m)
     {
         m.Name = dto.Name.Trim();
@@ -48,16 +42,19 @@ public static class MappingExtensions
         m.IsActive = dto.IsActive;
     }
 
-    // ---------- Workouts ----------
-
     public static WorkoutDto ToDto(this Workout w) =>
         new(w.Id, w.Name, w.Description, w.TrainerId, w.DayOfWeek,
             FormatTime(w.StartTime), w.DurationMinutes, w.Level, w.MaxParticipants);
+    public static TimeOnly EndTime(this Workout w) =>
+        w.StartTime.AddMinutes(w.DurationMinutes);
+
+    public static ScheduleItemDto ToScheduleItemDto(this Workout w, string? trainerName) =>
+        new(w.Id, w.Name, FormatTime(w.StartTime), FormatTime(w.EndTime()), w.DurationMinutes,
+            w.Level, w.TrainerId, trainerName, w.MaxParticipants);
 
     public static WorkoutShortDto ToShortDto(this Workout w) =>
         new(w.Id, w.Name, w.DayOfWeek, FormatTime(w.StartTime), w.Level);
 
-    /// <summary>Потребує завантажених MembershipWorkouts.Membership (Include/ThenInclude).</summary>
     public static WorkoutDetailsDto ToDetailsDto(this Workout w) =>
         new(w.Id, w.Name, w.Description, w.TrainerId, w.DayOfWeek,
             FormatTime(w.StartTime), w.DurationMinutes, w.Level, w.MaxParticipants,
@@ -66,7 +63,6 @@ public static class MappingExtensions
                 .OrderBy(m => m.Price)
                 .Select(m => new WorkoutMembershipDto(m.Id, m.Name, m.Price))
                 .ToList());
-
     public static Workout ToEntity(this CreateWorkoutDto dto)
     {
         var workout = new Workout();
@@ -74,7 +70,6 @@ public static class MappingExtensions
         return workout;
     }
 
-    /// <summary>Переносить значення з DTO в існуючу сутність (для PUT).</summary>
     public static void ApplyTo(this CreateWorkoutDto dto, Workout w)
     {
         w.Name = dto.Name.Trim();
@@ -86,8 +81,6 @@ public static class MappingExtensions
         w.Level = dto.Level!.Value;
         w.MaxParticipants = dto.MaxParticipants;
     }
-
-    // ---------- Members ----------
 
     public static MemberDto ToDto(this Member m) =>
         new(
@@ -110,8 +103,6 @@ public static class MappingExtensions
         IsActive = dto.IsActive,
         MembershipId = dto.MembershipId
     };
-
-    // ---------- Trainers ----------
 
     public static TrainerDto ToDto(this Trainer t) =>
         new(
