@@ -3,7 +3,6 @@ using FitnessClub.Api.DTOs.Workouts;
 using FitnessClub.Api.Models;
 using Microsoft.EntityFrameworkCore;
 namespace FitnessClub.Api.Repositories;
-
 public interface IWorkoutRepository
 {
     Task<List<Workout>> GetAllAsync(WorkoutQueryParameters query);
@@ -25,7 +24,9 @@ public class WorkoutRepository : IWorkoutRepository
     }
     public async Task<List<Workout>> GetAllAsync(WorkoutQueryParameters q)
     {
-        IQueryable<Workout> query = _db.Workouts.AsNoTracking();
+        IQueryable<Workout> query = _db.Workouts
+            .AsNoTracking()
+            .Include(w => w.Club);
 
         if (q.Day is DayOfWeek day)
             query = query.Where(w => w.DayOfWeek == day);
@@ -35,6 +36,9 @@ public class WorkoutRepository : IWorkoutRepository
 
         if (q.TrainerId is int trainerId)
             query = query.Where(w => w.TrainerId == trainerId);
+
+        if (q.ClubId is int clubId)
+            query = query.Where(w => w.ClubId == clubId);
 
         if (q.MembershipId is int membershipId)
             query = query.Where(w => w.MembershipWorkouts.Any(mw => mw.MembershipId == membershipId));
@@ -61,6 +65,7 @@ public class WorkoutRepository : IWorkoutRepository
     public Task<Workout?> GetWithMembershipsAsync(int id) =>
         _db.Workouts
             .AsNoTracking()
+            .Include(w => w.Club)
             .Include(w => w.MembershipWorkouts)
                 .ThenInclude(mw => mw.Membership)
             .FirstOrDefaultAsync(w => w.Id == id);

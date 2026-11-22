@@ -12,15 +12,19 @@ public class WorkoutScheduleValidator : IWorkoutScheduleValidator
     private const int MinutesInDay = 24 * 60;
     private readonly IWorkoutRepository _workouts;
     private readonly ITrainerRepository _trainers;
-    public WorkoutScheduleValidator(IWorkoutRepository workouts, ITrainerRepository trainers)
+    private readonly IClubRepository _clubs;
+    public WorkoutScheduleValidator(IWorkoutRepository workouts, ITrainerRepository trainers, IClubRepository clubs)
     {
         _workouts = workouts;
         _trainers = trainers;
+        _clubs = clubs;
     }
     public async Task ValidateAsync(Workout workout)
     {
         if (_trainers.GetById(workout.TrainerId) is null)
             throw new BadRequestException($"Тренера з id={workout.TrainerId} не існує.");
+        if (!await _clubs.ExistsAsync(workout.ClubId))
+            throw new BadRequestException($"Клубу з id={workout.ClubId} не існує.");
         var start = ToMinutes(workout.StartTime);
         var end = start + workout.DurationMinutes;
         if (end > MinutesInDay)

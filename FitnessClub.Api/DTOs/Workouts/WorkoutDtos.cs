@@ -6,6 +6,7 @@ public record WorkoutDto(
     string Name,
     string? Description,
     int TrainerId,
+    int ClubId,
     DayOfWeek DayOfWeek,
     string StartTime,
     int DurationMinutes,
@@ -23,6 +24,8 @@ public record WorkoutDetailsDto(
     string Name,
     string? Description,
     int TrainerId,
+    int ClubId,
+    string ClubName,
     DayOfWeek DayOfWeek,
     string StartTime,
     int DurationMinutes,
@@ -38,6 +41,8 @@ public class CreateWorkoutDto
     public string? Description { get; set; }
     [Range(1, int.MaxValue, ErrorMessage = "Потрібно вказати коректний trainerId.")]
     public int TrainerId { get; set; }
+    [Range(1, int.MaxValue, ErrorMessage = "Потрібно вказати коректний clubId.")]
+    public int ClubId { get; set; }
     [Required(ErrorMessage = "День тижня обов'язковий.")]
     [EnumDataType(typeof(DayOfWeek))]
     public DayOfWeek? DayOfWeek { get; set; }
@@ -63,6 +68,8 @@ public class WorkoutQueryParameters
     public int? TrainerId { get; set; }
     [Range(1, int.MaxValue)]
     public int? MembershipId { get; set; }
+    [Range(1, int.MaxValue)]
+    public int? ClubId { get; set; }
     [StringLength(100)]
     public string? Search { get; set; }
     [RegularExpression("^(?i)(schedule|name|duration)$", ErrorMessage = "sortBy може бути лише: schedule, name, duration.")]
@@ -78,13 +85,13 @@ public record ScheduleItemDto(
     DifficultyLevel Level,
     int TrainerId,
     string? TrainerName,
+    int ClubId,
+    string? ClubName,
     int MaxParticipants);
-
 public record ScheduleDayDto(
     DayOfWeek Day,
     int WorkoutsCount,
     IReadOnlyList<ScheduleItemDto> Workouts);
-
 public class ScheduleQueryParameters
 {
     public DifficultyLevel? Level { get; set; }
@@ -92,5 +99,7 @@ public class ScheduleQueryParameters
     public int? TrainerId { get; set; }
     [Range(1, int.MaxValue)]
     public int? MembershipId { get; set; }
+    [Range(1, int.MaxValue)]
+    public int? ClubId { get; set; }
     public bool IncludeEmptyDays { get; set; } = true;
 }

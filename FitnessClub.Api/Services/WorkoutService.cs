@@ -37,7 +37,8 @@ public class WorkoutService : IWorkoutService
         {
             Level = query.Level,
             TrainerId = query.TrainerId,
-            MembershipId = query.MembershipId
+            MembershipId = query.MembershipId,
+            ClubId = query.ClubId
         });
         var trainerNames = _trainers.GetAll()
             .ToDictionary(t => t.Id, t => $"{t.FirstName} {t.LastName}");
@@ -59,14 +60,12 @@ public class WorkoutService : IWorkoutService
     {
         var workout = await _workouts.GetWithMembershipsAsync(id)
             ?? throw NotFound(id);
-
         return workout.ToDetailsDto();
     }
     public async Task<WorkoutDto> CreateAsync(CreateWorkoutDto dto)
     {
         var workout = dto.ToEntity();
         await _scheduleValidator.ValidateAsync(workout);
-
         await _workouts.AddAsync(workout);
         return workout.ToDto();
     }
@@ -74,14 +73,11 @@ public class WorkoutService : IWorkoutService
     {
         var workout = await _workouts.GetByIdAsync(id)
             ?? throw NotFound(id);
-
         var candidate = dto.ToEntity();
         candidate.Id = id;
         await _scheduleValidator.ValidateAsync(candidate);
-
         dto.ApplyTo(workout);
         await _workouts.SaveChangesAsync();
-
         return workout.ToDto();
     }
     public async Task DeleteAsync(int id)

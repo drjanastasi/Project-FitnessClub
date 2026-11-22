@@ -45,20 +45,20 @@ public static class MappingExtensions
     }
 
     public static WorkoutDto ToDto(this Workout w) =>
-        new(w.Id, w.Name, w.Description, w.TrainerId, w.DayOfWeek,
+        new(w.Id, w.Name, w.Description, w.TrainerId, w.ClubId, w.DayOfWeek,
             FormatTime(w.StartTime), w.DurationMinutes, w.Level, w.MaxParticipants);
     public static TimeOnly EndTime(this Workout w) =>
         w.StartTime.AddMinutes(w.DurationMinutes);
 
     public static ScheduleItemDto ToScheduleItemDto(this Workout w, string? trainerName) =>
         new(w.Id, w.Name, FormatTime(w.StartTime), FormatTime(w.EndTime()), w.DurationMinutes,
-            w.Level, w.TrainerId, trainerName, w.MaxParticipants);
+            w.Level, w.TrainerId, trainerName, w.ClubId, w.Club?.Name, w.MaxParticipants);
 
     public static WorkoutShortDto ToShortDto(this Workout w) =>
         new(w.Id, w.Name, w.DayOfWeek, FormatTime(w.StartTime), w.Level);
 
     public static WorkoutDetailsDto ToDetailsDto(this Workout w) =>
-        new(w.Id, w.Name, w.Description, w.TrainerId, w.DayOfWeek,
+        new(w.Id, w.Name, w.Description, w.TrainerId, w.ClubId, w.Club.Name, w.DayOfWeek,
             FormatTime(w.StartTime), w.DurationMinutes, w.Level, w.MaxParticipants,
             w.MembershipWorkouts
                 .Select(mw => mw.Membership)
@@ -77,6 +77,7 @@ public static class MappingExtensions
         w.Name = dto.Name.Trim();
         w.Description = dto.Description?.Trim();
         w.TrainerId = dto.TrainerId;
+        w.ClubId = dto.ClubId;
         w.DayOfWeek = dto.DayOfWeek!.Value;
         w.StartTime = TimeOnly.ParseExact(dto.StartTime, "HH:mm", CultureInfo.InvariantCulture);
         w.DurationMinutes = dto.DurationMinutes;

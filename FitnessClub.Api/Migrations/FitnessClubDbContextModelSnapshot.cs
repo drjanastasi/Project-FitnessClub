@@ -330,6 +330,9 @@ namespace FitnessClub.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("ClubId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("DayOfWeek")
                         .HasColumnType("INTEGER");
 
@@ -361,6 +364,8 @@ namespace FitnessClub.Api.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ClubId");
+
                     b.HasIndex("DayOfWeek");
 
                     b.ToTable("Workouts", (string)null);
@@ -369,6 +374,7 @@ namespace FitnessClub.Api.Migrations
                         new
                         {
                             Id = 1,
+                            ClubId = 1,
                             DayOfWeek = 1,
                             Description = "Хатха-йога для розтяжки та розслаблення",
                             DurationMinutes = 60,
@@ -381,6 +387,7 @@ namespace FitnessClub.Api.Migrations
                         new
                         {
                             Id = 2,
+                            ClubId = 2,
                             DayOfWeek = 2,
                             Description = "Кругове тренування з власною вагою",
                             DurationMinutes = 45,
@@ -393,6 +400,7 @@ namespace FitnessClub.Api.Migrations
                         new
                         {
                             Id = 3,
+                            ClubId = 1,
                             DayOfWeek = 3,
                             Description = "Зміцнення м'язів кору",
                             DurationMinutes = 50,
@@ -405,6 +413,7 @@ namespace FitnessClub.Api.Migrations
                         new
                         {
                             Id = 4,
+                            ClubId = 2,
                             DayOfWeek = 5,
                             Description = "Високоінтенсивне тренування",
                             DurationMinutes = 60,
@@ -572,6 +581,17 @@ namespace FitnessClub.Api.Migrations
                     b.Navigation("Membership");
 
                     b.Navigation("Workout");
+                });
+
+            modelBuilder.Entity("FitnessClub.Api.Models.Workout", b =>
+                {
+                    b.HasOne("FitnessClub.Api.Models.Club", "Club")
+                        .WithMany()
+                        .HasForeignKey("ClubId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Club");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
