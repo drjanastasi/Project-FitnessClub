@@ -13,11 +13,11 @@ public class FitnessClubDbContext : IdentityDbContext<AppUser>
     public DbSet<Workout> Workouts => Set<Workout>();
     public DbSet<MembershipWorkout> MembershipWorkouts => Set<MembershipWorkout>();
     public DbSet<Club> Clubs => Set<Club>();
+    public DbSet<Booking> Bookings => Set<Booking>();
 
     // TODO (інші учасники):
     // public DbSet<Member> Members => Set<Member>();
     // public DbSet<Trainer> Trainers => Set<Trainer>();
-    // public DbSet<Booking> Bookings => Set<Booking>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

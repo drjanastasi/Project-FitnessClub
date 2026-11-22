@@ -28,10 +28,12 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped<IMembershipRepository, MembershipRepository>();
         services.AddScoped<IWorkoutRepository, WorkoutRepository>();
+        services.AddScoped<IClubRepository, ClubRepository>();
         services.AddSingleton<ITrainerRepository, InMemoryTrainerRepository>();
         services.AddSingleton<IMemberRepository, InMemoryMemberRepository>();
         services.AddScoped<IMembershipService, MembershipService>();
         services.AddScoped<IWorkoutService, WorkoutService>();
+        services.AddScoped<IClubService, ClubService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddTransient<IWorkoutScheduleValidator, WorkoutScheduleValidator>();
         services.AddSingleton<ITokenService, JwtTokenService>();

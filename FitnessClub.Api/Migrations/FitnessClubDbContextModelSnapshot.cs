@@ -94,6 +94,104 @@ namespace FitnessClub.Api.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("FitnessClub.Api.Models.Booking", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("MemberId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("WorkoutId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkoutId", "Date");
+
+                    b.HasIndex("MemberId", "WorkoutId", "Date")
+                        .IsUnique()
+                        .HasFilter("\"Status\" = 'Confirmed'");
+
+                    b.ToTable("Bookings", (string)null);
+                });
+
+            modelBuilder.Entity("FitnessClub.Api.Models.Club", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(13)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("WorkHours")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Clubs", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Address = "м. Кривий Ріг, вул. Центральна, 1",
+                            Description = "Головна філія з тренажерним залом і залами для групових занять",
+                            Email = "center@fitnessclub.ua",
+                            Name = "FitnessClub Центр",
+                            Phone = "+380501234567",
+                            WorkHours = "Пн–Нд 07:00–22:00"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Address = "м. Кривий Ріг, вул. Північна, 10",
+                            Description = "Філія в північному районі",
+                            Email = "north@fitnessclub.ua",
+                            Name = "FitnessClub Північ",
+                            Phone = "+380507654321",
+                            WorkHours = "Пн–Пт 08:00–21:00, Сб–Нд 09:00–18:00"
+                        });
+                });
+
             modelBuilder.Entity("FitnessClub.Api.Models.Membership", b =>
                 {
                     b.Property<int>("Id")
@@ -444,6 +542,17 @@ namespace FitnessClub.Api.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
+                });
+
+            modelBuilder.Entity("FitnessClub.Api.Models.Booking", b =>
+                {
+                    b.HasOne("FitnessClub.Api.Models.Workout", "Workout")
+                        .WithMany()
+                        .HasForeignKey("WorkoutId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Workout");
                 });
 
             modelBuilder.Entity("FitnessClub.Api.Models.MembershipWorkout", b =>

@@ -4,6 +4,7 @@ using FitnessClub.Api.DTOs.Memberships;
 using FitnessClub.Api.DTOs.Trainers;
 using FitnessClub.Api.DTOs.Workouts;
 using FitnessClub.Api.Models;
+using FitnessClub.Api.DTOs.Bookings;
 using System.Globalization;
 
 namespace FitnessClub.Api.Mapping;
@@ -146,4 +147,27 @@ public static class MappingExtensions
         c.Email = dto.Email.Trim();
         c.WorkHours = dto.WorkHours?.Trim();
     }
+
+    // ---------- Bookings ----------
+
+    /// <summary>
+    /// Booking у DTO. Тренування (Workout) має бути завантажене через Include,
+    /// інакше назва й розклад будуть недоступні.
+    /// </summary>
+    /// 
+
+    public static BookingDto ToDto(this Booking b) =>
+        new(b.Id, b.MemberId, b.WorkoutId, b.Workout.Name, b.Workout.DayOfWeek,
+            b.Workout.StartTime, b.Date, b.Status, b.CreatedAt);
+
+    /// <summary>Новий запис зі статусом Confirmed. Час створення передає сервіс.</summary>
+    public static Booking ToEntity(this CreateBookingDto dto, DateTime createdAtUtc) =>
+        new()
+        {
+            MemberId = dto.MemberId,
+            WorkoutId = dto.WorkoutId,
+            Date = dto.Date!.Value,
+            Status = BookingStatus.Confirmed,
+            CreatedAt = createdAtUtc
+        };
 }
