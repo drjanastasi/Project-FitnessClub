@@ -71,7 +71,7 @@ Query-параметри для `GET /api/memberships`: `isActive`, `minPrice`, 
 | PUT | `/api/workouts/{id}` | Повністю оновити | 200, 400, 404 |
 | DELETE | `/api/workouts/{id}` | Видалити | 204, 404 |
 
-Query-параметри для `GET /api/workouts`: `day` (`Monday`…`Sunday`), `level` (`Beginner` \| `Intermediate` \| `Advanced`), `trainerId`, `membershipId` (тренування, що входять в абонемент), `search`, `sortBy` (`schedule` \| `name` \| `duration`), `desc`.
+Query-параметри для `GET /api/workouts`: `day` (`Monday`…`Sunday`), `level` (`Beginner` \| `Intermediate` \| `Advanced`), `trainerId`, `membershipId` (тренування, що входять в абонемент), `clubId` (тренування конкретного клубу), `search`, `sortBy` (`schedule` \| `name` \| `duration`), `desc`.
 Приклад: `GET /api/workouts?day=Monday&level=Beginner`, `GET /api/workouts?membershipId=3`
 
 Приклад тіла `POST /api/workouts`:
@@ -81,6 +81,7 @@ Query-параметри для `GET /api/workouts`: `day` (`Monday`…`Sunday`)
   "name": "Йога",
   "description": "Хатха-йога для розтяжки",
   "trainerId": 1,
+  "clubId": 1,
   "dayOfWeek": "Monday",
   "startTime": "18:00",
   "durationMinutes": 60,
@@ -90,11 +91,12 @@ Query-параметри для `GET /api/workouts`: `day` (`Monday`…`Sunday`)
 ```
 
 
-Query-параметри для `GET /api/workouts/schedule`: `level`, `trainerId`, `membershipId`, `includeEmptyDays` (за замовчуванням `true` — усі 7 днів).
+Query-параметри для `GET /api/workouts/schedule`: `level`, `trainerId`, `membershipId`, `clubId`, `includeEmptyDays` (за замовчуванням `true` — усі 7 днів).
 Приклад: `GET /api/workouts/schedule?level=Beginner&includeEmptyDays=false`
 
 **Правила розкладу** (перевіряються під час `POST` і `PUT`):
 - тренер з `trainerId` має існувати → інакше **400**;
+- клуб з `clubId` має існувати → інакше **400**;
 - тренування має закінчитися до 24:00 того ж дня → інакше **400**;
 - у тренера не може бути двох тренувань, що перетинаються за часом у той самий день → інакше **409**
   (наприклад, Йога 18:00–19:00 і Стретчинг о 18:30 у того самого тренера).
@@ -147,6 +149,7 @@ Memberships 1 ──── * MembershipWorkouts * ──── 1 Workouts
 | Name | string | обов'язкове, ≤100 |
 | Description | string? | ≤500 |
 | TrainerId | int | обов'язкове; стане FK на Trainers |
+| ClubId | int | обов'язкове, FK → Clubs, ON DELETE RESTRICT |
 | DayOfWeek | DayOfWeek (int) | обов'язкове, індекс |
 | StartTime | TimeOnly | обов'язкове |
 | DurationMinutes | int | обов'язкове |
@@ -162,6 +165,7 @@ Memberships 1 ──── * MembershipWorkouts * ──── 1 Workouts
 
 ### Зв'язки
 
+- **Club → Workout — один-до-багатьох**: тренування проходить у конкретному клубі (філії). `Restrict` — не можна видалити клуб, поки в ньому є тренування.
 - **Membership ↔ Workout — багато-до-багатьох** через `MembershipWorkouts`: один абонемент включає кілька тренувань, одне тренування доступне в кількох абонементах. Видалення абонемента чи тренування каскадно видаляє лише рядки зв'язку.
 - **Trainer → Workout — один-до-багатьох** (підготовлено в `WorkoutConfiguration`, вмикається разом із сутністю Trainer). `Restrict` — не можна видалити тренера, у якого є тренування.
 
