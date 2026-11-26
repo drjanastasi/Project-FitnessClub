@@ -18,8 +18,12 @@ namespace FitnessClub.Api.DTOs.Bookings
     /// <summary>Тіло запиту POST /api/bookings.</summary>
     public class CreateBookingDto
     {
+        /// <summary>
+        /// Id клієнта. Обов'язковий для адміністратора; для звичайного користувача
+        /// не потрібен: запис робиться на нього самого.
+        /// </summary>
         [Range(1, int.MaxValue, ErrorMessage = "Вкажіть коректний id клієнта.")]
-        public int MemberId { get; set; }
+        public int? MemberId { get; set; }
 
         [Range(1, int.MaxValue, ErrorMessage = "Вкажіть коректний id тренування.")]
         public int WorkoutId { get; set; }

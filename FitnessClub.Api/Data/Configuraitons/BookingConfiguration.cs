@@ -13,10 +13,14 @@ namespace FitnessClub.Api.Data.Configuraitons
 
             builder.HasKey(b => b.Id);
 
-            // Зовнішнього ключа на Members поки немає: клієнти зберігаються в пам'яті.
-            // Коли Members перейдуть на EF Core, тут додати:
-            // builder.HasOne<Member>().WithMany().HasForeignKey(b => b.MemberId)
-            //        .OnDelete(DeleteBehavior.Restrict);
+            builder.Property(b => b.MemberId).IsRequired();
+
+            // Клієнт може мати багато записів. Клієнта із записами видалити не можна (Restrict).
+            builder.HasOne<Member>()
+                .WithMany()
+                .HasForeignKey(b => b.MemberId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             builder.Property(b => b.MemberId).IsRequired();
 
             builder.Property(b => b.WorkoutId).IsRequired();

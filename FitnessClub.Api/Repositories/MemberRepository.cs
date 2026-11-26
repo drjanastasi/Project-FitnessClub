@@ -1,108 +1,80 @@
+using FitnessClub.Api.Data;
 using FitnessClub.Api.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace FitnessClub.Api.Repositories;
 
 public interface IMemberRepository
 {
-    IReadOnlyList<Member> GetAll();
-    Member? GetById(int id);
-    bool EmailExists(string email, int? exceptId = null);
-    Member Add(Member member);
-    bool Update(Member member);
-    bool Delete(int id);
+    Task<List<Member>> GetAllAsync(bool? isActive, string? search);
+    Task<Member?> GetByIdAsync(int id);
+    Task<Member?> GetByEmailAsync(string email);
+    Task<bool> EmailExistsAsync(string email, int? exceptId = null);
+    Task AddAsync(Member member);
+    Task SaveChangesAsync();
+    Task DeleteAsync(Member member);
 }
 
-
-public class InMemoryMemberRepository : IMemberRepository
+/// <summary>
+/// Робота з клієнтами через Entity Framework Core.
+/// Email зберігається в нижньому регістрі (це робить сервіс), тому порівняння прямі.
+/// </summary>
+public class MemberRepository : IMemberRepository
 {
-    private readonly List<Member> _items = new();
-    private readonly object _lock = new();
-    private int _nextId = 1;
+    private readonly FitnessClubDbContext _db;
 
-    public InMemoryMemberRepository()
+    public MemberRepository(FitnessClubDbContext db)
     {
-        Add(new Member
-        {
-            FirstName = "Олександр",
-            LastName = "Іваненко",
-            Email = "ivanenko@gmail.com",
-            Phone = "+380501112233",
-            BirthDate = new DateOnly(1995, 4, 12),
-            IsActive = true,
-            MembershipId = 1
-        });
-
-        Add(new Member
-        {
-            FirstName = "Марія",
-            LastName = "Петренко",
-            Email = "petrenko@gmail.com",
-            Phone = "+380671234567",
-            BirthDate = new DateOnly(2000, 8, 25),
-            IsActive = true,
-            MembershipId = 2
-        });
-
-        Add(new Member
-        {
-            FirstName = "Андрій",
-            LastName = "Коваленко",
-            Email = "kovalenko@gmail.com",
-            Phone = "+380931234567",
-            BirthDate = new DateOnly(1988, 2, 5),
-            IsActive = false,
-            MembershipId = 3
-        });
+        _db = db;
     }
 
-    public IReadOnlyList<Member> GetAll()
+    public async Task<List<Member>> GetAllAsync(bool? isActive, string? search)
     {
-        lock (_lock)
-            return _items.ToList();
-    }
+        IQueryable<Member> query = _db.Members.AsNoTracking();
 
-    public Member? GetById(int id)
-    {
-        lock (_lock)
-            return _items.FirstOrDefault(m => m.Id == id);
-    }
+        if (isActive.HasValue)
+            query = query.Where(m => m.IsActive == isActive.Value);
 
-    public bool EmailExists(string email, int? exceptId = null)
-    {
-        lock (_lock)
-            return _items.Any(m =>
-                m.Id != exceptId &&
-                string.Equals(m.Email, email.Trim(),
-                    StringComparison.OrdinalIgnoreCase));
-    }
-
-    public Member Add(Member member)
-    {
-        lock (_lock)
+        // Увага: у SQLite пошук чутливий до регістру для кирилиці.
+        if (!string.IsNullOrWhiteSpace(search))
         {
-            member.Id = _nextId++;
-            _items.Add(member);
-            return member;
+            var s = search.Trim();
+            query = query.Where(m =>
+                m.FirstName.Contains(s) ||
+                m.LastName.Contains(s) ||
+                m.Email.Contains(s));
         }
+
+        return await query.OrderBy(m => m.Id).ToListAsync();
     }
 
-    public bool Update(Member member)
+    /// <summary>Клієнт для зміни (EF відстежує його, SaveChangesAsync збереже зміни).</summary>
+    public Task<Member?> GetByIdAsync(int id) =>
+        _db.Members.FirstOrDefaultAsync(m => m.Id == id);
+
+    public Task<Member?> GetByEmailAsync(string email)
     {
-        lock (_lock)
-        {
-            var index = _items.FindIndex(m => m.Id == member.Id);
-
-            if (index < 0)
-                return false;
-
-            _items[index] = member;
-            return true;
-        }
+        var normalized = email.Trim().ToLowerInvariant();
+        return _db.Members.AsNoTracking().FirstOrDefaultAsync(m => m.Email == normalized);
     }
 
-    public bool Delete(int id)
+    public Task<bool> EmailExistsAsync(string email, int? exceptId = null)
     {
-        lock (_lock)
-            return _items.RemoveAll(m => m.Id == id) > 0;
+        var normalized = email.Trim().ToLowerInvariant();
+        return _db.Members.AnyAsync(m => m.Email == normalized && m.Id != exceptId);
+    }
+
+    public async Task AddAsync(Member member)
+    {
+        _db.Members.Add(member);
+        await _db.SaveChangesAsync();
+    }
+
+    public Task SaveChangesAsync() => _db.SaveChangesAsync();
+
+    public async Task DeleteAsync(Member member)
+    {
+        _db.Members.Remove(member);
+        await _db.SaveChangesAsync();
     }
 }

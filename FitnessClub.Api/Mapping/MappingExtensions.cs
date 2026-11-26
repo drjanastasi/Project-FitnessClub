@@ -161,11 +161,11 @@ public static class MappingExtensions
         new(b.Id, b.MemberId, b.WorkoutId, b.Workout.Name, b.Workout.DayOfWeek,
             b.Workout.StartTime, b.Date, b.Status, b.CreatedAt);
 
-    /// <summary>Новий запис зі статусом Confirmed. Час створення передає сервіс.</summary>
-    public static Booking ToEntity(this CreateBookingDto dto, DateTime createdAtUtc) =>
+    /// <summary>Новий запис зі статусом Confirmed. Клієнта й час створення передає сервіс.</summary>
+    public static Booking ToEntity(this CreateBookingDto dto, int memberId, DateTime createdAtUtc) =>
         new()
         {
-            MemberId = dto.MemberId,
+            MemberId = memberId,
             WorkoutId = dto.WorkoutId,
             Date = dto.Date!.Value,
             Status = BookingStatus.Confirmed,

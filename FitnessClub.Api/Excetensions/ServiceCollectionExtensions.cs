@@ -30,7 +30,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IWorkoutRepository, WorkoutRepository>();
         services.AddScoped<IClubRepository, ClubRepository>();
         services.AddSingleton<ITrainerRepository, InMemoryTrainerRepository>();
-        services.AddSingleton<IMemberRepository, InMemoryMemberRepository>();
+        services.AddScoped<IMemberRepository, MemberRepository>();
+        services.AddScoped<IMemberService, MemberService>();
         services.AddScoped<IMembershipService, MembershipService>();
         services.AddScoped<IWorkoutService, WorkoutService>();
         services.AddScoped<IClubService, ClubService>();
@@ -43,6 +44,8 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ITransientProbe, LifetimeProbe>();
         services.AddScoped<IScopedProbe, LifetimeProbe>();
         services.AddSingleton<ISingletonProbe, LifetimeProbe>();
+        services.AddHttpContextAccessor();
+        services.AddScoped<ICurrentUser, CurrentUser>();
         return services;
     }
     public static IServiceCollection AddIdentityAndJwt(this IServiceCollection services, IConfiguration configuration)

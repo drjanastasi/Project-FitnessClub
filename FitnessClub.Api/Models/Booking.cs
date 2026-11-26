@@ -12,7 +12,7 @@
         public int Id { get; set; }
 
         /// <summary>
-        /// Ідентифікатор клієнта. 
+        /// Клієнт (FK → Members)
         /// </summary>
         public int MemberId { get; set; }
 

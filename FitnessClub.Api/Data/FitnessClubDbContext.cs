@@ -14,9 +14,9 @@ public class FitnessClubDbContext : IdentityDbContext<AppUser>
     public DbSet<MembershipWorkout> MembershipWorkouts => Set<MembershipWorkout>();
     public DbSet<Club> Clubs => Set<Club>();
     public DbSet<Booking> Bookings => Set<Booking>();
+    public DbSet<Member> Members => Set<Member>();
 
     // TODO (інші учасники):
-    // public DbSet<Member> Members => Set<Member>();
     // public DbSet<Trainer> Trainers => Set<Trainer>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

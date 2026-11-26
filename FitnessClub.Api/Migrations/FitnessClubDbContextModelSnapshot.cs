@@ -192,6 +192,86 @@ namespace FitnessClub.Api.Migrations
                         });
                 });
 
+            modelBuilder.Entity("FitnessClub.Api.Models.Member", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateOnly>("BirthDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("MembershipId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.HasIndex("MembershipId");
+
+                    b.ToTable("Members", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            BirthDate = new DateOnly(1995, 4, 12),
+                            Email = "ivanenko@gmail.com",
+                            FirstName = "Олександр",
+                            IsActive = true,
+                            LastName = "Іваненко",
+                            MembershipId = 1,
+                            Phone = "+380501112233"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            BirthDate = new DateOnly(2000, 8, 25),
+                            Email = "petrenko@gmail.com",
+                            FirstName = "Марія",
+                            IsActive = true,
+                            LastName = "Петренко",
+                            MembershipId = 2,
+                            Phone = "+380671234567"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            BirthDate = new DateOnly(1988, 2, 5),
+                            Email = "kovalenko@gmail.com",
+                            FirstName = "Андрій",
+                            IsActive = false,
+                            LastName = "Коваленко",
+                            MembershipId = 3,
+                            Phone = "+380931234567"
+                        });
+                });
+
             modelBuilder.Entity("FitnessClub.Api.Models.Membership", b =>
                 {
                     b.Property<int>("Id")
@@ -555,6 +635,12 @@ namespace FitnessClub.Api.Migrations
 
             modelBuilder.Entity("FitnessClub.Api.Models.Booking", b =>
                 {
+                    b.HasOne("FitnessClub.Api.Models.Member", null)
+                        .WithMany()
+                        .HasForeignKey("MemberId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("FitnessClub.Api.Models.Workout", "Workout")
                         .WithMany()
                         .HasForeignKey("WorkoutId")
@@ -562,6 +648,15 @@ namespace FitnessClub.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Workout");
+                });
+
+            modelBuilder.Entity("FitnessClub.Api.Models.Member", b =>
+                {
+                    b.HasOne("FitnessClub.Api.Models.Membership", null)
+                        .WithMany()
+                        .HasForeignKey("MembershipId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("FitnessClub.Api.Models.MembershipWorkout", b =>
