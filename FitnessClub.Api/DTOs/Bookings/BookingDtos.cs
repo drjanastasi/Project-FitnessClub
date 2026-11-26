@@ -38,6 +38,9 @@ namespace FitnessClub.Api.DTOs.Bookings
 
         public int? WorkoutId { get; set; }
 
+        /// <summary>Записи на тренування конкретного клубу (філії).</summary>
+        public int? ClubId { get; set; }
+
         /// <summary>Статус запису: Confirmed або Cancelled.</summary>
         public BookingStatus? Status { get; set; }
 
