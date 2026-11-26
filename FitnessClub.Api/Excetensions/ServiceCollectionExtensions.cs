@@ -34,6 +34,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IMembershipService, MembershipService>();
         services.AddScoped<IWorkoutService, WorkoutService>();
         services.AddScoped<IClubService, ClubService>();
+        services.AddScoped<IBookingService, BookingService>();
+        services.AddScoped<IBookingRepository, BookingRepository>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddTransient<IWorkoutScheduleValidator, WorkoutScheduleValidator>();
         services.AddSingleton<ITokenService, JwtTokenService>();

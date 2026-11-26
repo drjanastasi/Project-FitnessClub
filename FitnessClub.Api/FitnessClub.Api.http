@@ -161,3 +161,209 @@ Authorization: Bearer {{adminLogin.response.body.token}}
 
 ### Демонстрація життєвих циклів DI (виконати двічі)
 GET {{baseUrl}}/diagnostics/lifetimes
+
+### ===== Clubs =====
+
+### Усі клуби
+GET {{baseUrl}}/clubs
+
+### Пошук і сортування клубів
+GET {{baseUrl}}/clubs?search=Центр&sortBy=name&desc=true
+
+### Один клуб
+GET {{baseUrl}}/clubs/1
+
+### Клуб не існує → 404
+GET {{baseUrl}}/clubs/999
+
+### Створити клуб (адміністратор) → 201
+POST {{baseUrl}}/clubs
+Authorization: Bearer {{adminLogin.response.body.token}}
+Content-Type: application/json
+
+{
+  "name": "FitnessClub Південь",
+  "description": "Нова філія",
+  "address": "м. Кривий Ріг, вул. Південна, 5",
+  "phone": "+380509999999",
+  "email": "south@fitnessclub.ua",
+  "workHours": "Пн–Нд 08:00–21:00"
+}
+
+### Створити клуб без токена → 401
+POST {{baseUrl}}/clubs
+Content-Type: application/json
+
+{
+  "name": "Без токена",
+  "address": "м. Кривий Ріг, вул. Тестова, 1",
+  "phone": "+380501111111",
+  "email": "test@fitnessclub.ua"
+}
+
+### Некоректний телефон → 400
+POST {{baseUrl}}/clubs
+Authorization: Bearer {{adminLogin.response.body.token}}
+Content-Type: application/json
+
+{
+  "name": "Тест",
+  "address": "м. Кривий Ріг, вул. Тестова, 1",
+  "phone": "0501234567",
+  "email": "test@fitnessclub.ua"
+}
+
+### Назва вже існує → 409
+POST {{baseUrl}}/clubs
+Authorization: Bearer {{adminLogin.response.body.token}}
+Content-Type: application/json
+
+{
+  "name": "FitnessClub Центр",
+  "address": "м. Кривий Ріг, вул. Інша, 2",
+  "phone": "+380501111111",
+  "email": "dup@fitnessclub.ua"
+}
+
+### Повністю оновити клуб → 200
+PUT {{baseUrl}}/clubs/2
+Authorization: Bearer {{adminLogin.response.body.token}}
+Content-Type: application/json
+
+{
+  "name": "FitnessClub Північ",
+  "description": "Філія в північному районі (оновлено)",
+  "address": "м. Кривий Ріг, вул. Північна, 10",
+  "phone": "+380507654321",
+  "email": "north@fitnessclub.ua",
+  "workHours": "Пн–Нд 07:00–22:00"
+}
+
+### Видалити клуб, у якому є тренування → 409
+DELETE {{baseUrl}}/clubs/1
+Authorization: Bearer {{adminLogin.response.body.token}}
+
+### ===== Bookings =====
+
+### Вільні місця на Йогу в понеділок (без токена) → 200
+GET {{baseUrl}}/bookings/availability?workoutId=1&date=2026-11-30
+
+### Не вказано дату → 400
+GET {{baseUrl}}/bookings/availability?workoutId=1
+
+### Не той день тижня → 400
+GET {{baseUrl}}/bookings/availability?workoutId=1&date=2026-12-01
+
+### Записатися на тренування → 201
+POST {{baseUrl}}/bookings
+Authorization: Bearer {{adminLogin.response.body.token}}
+Content-Type: application/json
+
+{
+  "memberId": 2,
+  "workoutId": 1,
+  "date": "2026-11-30"
+}
+
+### Той самий запис вдруге → 409
+POST {{baseUrl}}/bookings
+Authorization: Bearer {{adminLogin.response.body.token}}
+Content-Type: application/json
+
+{
+  "memberId": 2,
+  "workoutId": 1,
+  "date": "2026-11-30"
+}
+
+### Не той день тижня (вівторок) → 400
+POST {{baseUrl}}/bookings
+Authorization: Bearer {{adminLogin.response.body.token}}
+Content-Type: application/json
+
+{
+  "memberId": 2,
+  "workoutId": 1,
+  "date": "2026-12-01"
+}
+
+### Дата в минулому → 400
+POST {{baseUrl}}/bookings
+Authorization: Bearer {{adminLogin.response.body.token}}
+Content-Type: application/json
+
+{
+  "memberId": 2,
+  "workoutId": 1,
+  "date": "2026-11-16"
+}
+
+### Абонемент клієнта 1 не включає тренування → 400
+POST {{baseUrl}}/bookings
+Authorization: Bearer {{adminLogin.response.body.token}}
+Content-Type: application/json
+
+{
+  "memberId": 1,
+  "workoutId": 1,
+  "date": "2026-11-30"
+}
+
+### Клієнт 3 неактивний → 400
+POST {{baseUrl}}/bookings
+Authorization: Bearer {{adminLogin.response.body.token}}
+Content-Type: application/json
+
+{
+  "memberId": 3,
+  "workoutId": 1,
+  "date": "2026-11-30"
+}
+
+### Клієнта не існує → 400
+POST {{baseUrl}}/bookings
+Authorization: Bearer {{adminLogin.response.body.token}}
+Content-Type: application/json
+
+{
+  "memberId": 99,
+  "workoutId": 1,
+  "date": "2026-11-30"
+}
+
+### Без дати → 400
+POST {{baseUrl}}/bookings
+Authorization: Bearer {{adminLogin.response.body.token}}
+Content-Type: application/json
+
+{
+  "memberId": 2,
+  "workoutId": 1
+}
+
+### Записи клієнта 2, підтверджені, за датою → 200
+GET {{baseUrl}}/bookings?memberId=2&status=Confirmed&sortBy=date
+Authorization: Bearer {{adminLogin.response.body.token}}
+
+### Записи на тренування клубу 1 → 200
+GET {{baseUrl}}/bookings?clubId=1
+Authorization: Bearer {{adminLogin.response.body.token}}
+
+### Один запис → 200
+GET {{baseUrl}}/bookings/1
+Authorization: Bearer {{adminLogin.response.body.token}}
+
+### Скасувати запис → 200 (статус Cancelled)
+POST {{baseUrl}}/bookings/1/cancel
+Authorization: Bearer {{adminLogin.response.body.token}}
+
+### Скасувати ще раз → 409
+POST {{baseUrl}}/bookings/1/cancel
+Authorization: Bearer {{adminLogin.response.body.token}}
+
+### Список записів без токена → 401
+GET {{baseUrl}}/bookings
+
+### Видалити запис (адміністратор) → 204
+DELETE {{baseUrl}}/bookings/1
+Authorization: Bearer {{adminLogin.response.body.token}}

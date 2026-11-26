@@ -11,6 +11,7 @@ namespace FitnessClub.Api.Repositories
         Task<Club?> GetByIdAsync(int id);
         Task<bool> ExistsAsync(int id);
         Task<bool> NameExistsAsync(string name, int? exceptId = null);
+        Task<bool> HasWorkoutsAsync(int id);
         Task AddAsync(Club club);
         Task SaveChangesAsync();
         Task DeleteAsync(Club club);
@@ -65,6 +66,9 @@ namespace FitnessClub.Api.Repositories
             var trimmed = name.Trim();
             return _db.Clubs.AnyAsync(c => c.Name == trimmed && c.Id != exceptId);
         }
+
+        public Task<bool> HasWorkoutsAsync(int id) =>
+                _db.Workouts.AnyAsync(w => w.ClubId == id);
 
         public async Task AddAsync(Club club)
         {

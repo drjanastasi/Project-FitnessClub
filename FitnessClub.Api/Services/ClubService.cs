@@ -62,8 +62,10 @@ namespace FitnessClub.Api.Services
             var club = await _clubs.GetByIdAsync(id)
                 ?? throw NotFound(id);
 
-            // TODO: коли в Workout з'явиться ClubId, тут перевіряти,
-            // чи є в клубі тренування, і кидати ConflictException (409).
+            if (await _clubs.HasWorkoutsAsync(id))
+                throw new ConflictException(
+                    $"Клуб \"{club.Name}\" неможливо видалити: у ньому є тренування. Спочатку видаліть або перенесіть їх.");
+
             await _clubs.DeleteAsync(club);
         }
 
