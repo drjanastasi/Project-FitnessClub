@@ -22,7 +22,7 @@
 |---|---|
 | Ромащенко Анастасія | Абонементи (`Memberships`) + Тренування (`Workouts`) |
 | Горбатенко Назар | Клієнти (`Members`) + Тренери (`Trainers`) |
-| _Ім'я Прізвище_ | Клуб (`Club`) + Записи (`Bookings`) |
+| Бондаренко Вероніка | Клуб (`Club`) + Записи (`Bookings`) |
 
 ## Основні сценарії використання
 
@@ -40,8 +40,8 @@
 | **Workouts** — тренування (містять розклад) | назва, опис, тренер, день тижня, час початку, тривалість (хв), рівень складності, макс. кількість учасників | ✅ реалізовано |
 | **Members** — клієнти | ім'я, прізвище, email, телефон, дата народження, активний, абонемент | ✅ реалізовано |
 | **Trainers** — тренери | ім'я, прізвище, email, телефон, спеціалізація, досвід | ✅ реалізовано |
-| **Club** — інформація про клуб | назва, опис, адреса, місто, телефон, email, години роботи | ⏳ в роботі |
-| **Bookings** — записи на тренування | клієнт, тренування, дата запису, статус (`Confirmed`, `Cancelled`) | ⏳ в роботі |
+| **Club** — клуби (філії) | назва, опис, адреса, телефон, email, години роботи | ✅ реалізовано |
+| **Bookings** — записи на тренування | клієнт, тренування, дата заняття, статус (`Confirmed`, `Cancelled`), час створення | ✅ реалізовано |
 
 ## Endpoints
 
@@ -101,6 +101,81 @@ Query-параметри для `GET /api/workouts/schedule`: `level`, `trainerI
 - у тренера не може бути двох тренувань, що перетинаються за часом у той самий день → інакше **409**
   (наприклад, Йога 18:00–19:00 і Стретчинг о 18:30 у того самого тренера).
 
+### Clubs — `/api/clubs`
+
+Клуб — це філія фітнес-клубу. У кожної філії власний розклад: тренування прив'язані до клубу через `clubId`.
+
+| Метод | Маршрут | Опис | Коди відповідей |
+|---|---|---|---|
+| GET | `/api/clubs` | Список клубів | 200, 400 |
+| GET | `/api/clubs/{id}` | Один клуб | 200, 404 |
+| POST | `/api/clubs` | Створити клуб (Administrator) | 201, 400, 401, 403, 409 |
+| PUT | `/api/clubs/{id}` | Повністю оновити (Administrator) | 200, 400, 401, 403, 404, 409 |
+| DELETE | `/api/clubs/{id}` | Видалити (Administrator) | 204, 401, 403, 404, 409 |
+
+Query-параметри для `GET /api/clubs`: `search` (за назвою, адресою або описом), `sortBy` (`name` \| `address`), `desc`.
+Приклад: `GET /api/clubs?search=Центр&sortBy=name&desc=true`
+
+Приклад тіла `POST /api/clubs`:
+
+```json
+{
+  "name": "FitnessClub Південь",
+  "description": "Нова філія",
+  "address": "м. Кривий Ріг, вул. Південна, 5",
+  "phone": "+380509999999",
+  "email": "south@fitnessclub.ua",
+  "workHours": "Пн–Нд 08:00–21:00"
+}
+```
+
+**Правила:**
+- телефон — у форматі `+380XXXXXXXXX` (13 символів), email — коректного формату → інакше **400**;
+- назва клубу унікальна → дубль дає **409**;
+- клуб, у якому є тренування, видалити не можна → **409**.
+
+### Bookings — `/api/bookings`
+
+Запис — це реєстрація клієнта на тренування в конкретну **дату**. Тренування в розкладі повторюється щотижня (день тижня + час), тому дата заняття зберігається в самому записі. Клуб запису визначається через тренування (`Workout.ClubId`).
+
+| Метод | Маршрут | Опис | Коди відповідей |
+|---|---|---|---|
+| GET | `/api/bookings` | Список записів (User, Administrator) | 200, 400, 401 |
+| GET | `/api/bookings/availability` | Вільні місця на тренування в дату (без входу) | 200, 400, 404 |
+| GET | `/api/bookings/{id}` | Один запис (User, Administrator) | 200, 401, 404 |
+| POST | `/api/bookings` | Записати клієнта на тренування (User, Administrator) | 201, 400, 401, 409 |
+| POST | `/api/bookings/{id}/cancel` | Скасувати запис (User, Administrator) | 200, 400, 401, 404, 409 |
+| DELETE | `/api/bookings/{id}` | Видалити запис остаточно (Administrator) | 204, 401, 403, 404 |
+
+Query-параметри для `GET /api/bookings`: `memberId`, `workoutId`, `clubId` (записи на тренування клубу), `status` (`Confirmed` \| `Cancelled`), `dateFrom`, `dateTo`, `sortBy` (`date` \| `createdAt`), `desc`.
+Приклад: `GET /api/bookings?memberId=2&status=Confirmed&sortBy=date`
+
+Параметри для `GET /api/bookings/availability`: `workoutId` і `date` (обидва обов'язкові).
+Приклад: `GET /api/bookings/availability?workoutId=1&date=2026-11-30` → `{ "workoutId": 1, "date": "2026-11-30", "maxParticipants": 15, "booked": 1, "freePlaces": 14 }`
+
+Приклад тіла `POST /api/bookings`:
+
+```json
+{
+  "memberId": 2,
+  "workoutId": 1,
+  "date": "2026-11-30"
+}
+```
+
+**Правила запису** (перевіряються в `BookingService` під час `POST`):
+- тренування з `workoutId` і клієнт з `memberId` мають існувати → інакше **400**;
+- дата не може бути в минулому → **400**;
+- день тижня дати має збігатися з днем проведення тренування (Йога по понеділках — запис на вівторок неможливий) → **400**;
+- клієнт має бути активним → **400**;
+- абонемент клієнта має бути активним і включати це тренування → **400**;
+- в одного клієнта не може бути двох активних записів на те саме тренування в ту саму дату → **409**;
+- кількість підтверджених записів на дату не може перевищувати `maxParticipants` → **409**.
+
+Перевірки дубля й вільних місць та сам запис виконуються в одній транзакції (`IUnitOfWork.ExecuteInTransactionAsync`).
+
+**Скасування:** `POST /api/bookings/{id}/cancel` змінює статус на `Cancelled` і звільняє місце. Повторне скасування → **409**; скасувати запис на заняття, що вже минуло, неможливо → **400**. Після скасування клієнт може записатися знову.
+
 ### Валідація та помилки
 
 - Вхідні дані приходять у **DTO** з атрибутами валідації (`[Required]`, `[StringLength]`, `[Range]`, `[RegularExpression]`). Невалідний запит автоматично отримує **400** з переліком помилок (`ValidationProblemDetails`).
@@ -124,10 +199,12 @@ Query-параметри для `GET /api/workouts/schedule`: `level`, `trainerI
 ### Модель даних
 
 ```
-Memberships 1 ──── * MembershipWorkouts * ──── 1 Workouts
-                                                    │ *
+Memberships 1 ──── * MembershipWorkouts * ──── 1 Workouts * ──── 1 Clubs
+                                                    │ 1
                                                     │
-                                                    1  Trainers (етап 2, інший учасник)
+                                                    * Bookings (MemberId → Members, поки без FK)
+
+Workouts * ──── 1 Trainers   (етап 2, інший учасник)
 ```
 
 **Memberships** — абонементи
@@ -163,9 +240,36 @@ Memberships 1 ──── * MembershipWorkouts * ──── 1 Workouts
 | MembershipId | int | PK (складений), FK → Memberships, ON DELETE CASCADE |
 | WorkoutId | int | PK (складений), FK → Workouts, ON DELETE CASCADE |
 
+**Clubs** — клуби (філії)
+
+| Поле | Тип | Обмеження |
+|---|---|---|
+| Id | int | PK |
+| Name | string | обов'язкове, ≤100, унікальне |
+| Description | string? | ≤500 |
+| Address | string | обов'язкове, ≤200 |
+| Phone | string | обов'язкове, ≤13 (формат `+380XXXXXXXXX`) |
+| Email | string | обов'язкове, ≤100 |
+| WorkHours | string? | ≤100 (наприклад, `Пн–Нд 07:00–22:00`) |
+
+**Bookings** — записи на тренування
+
+| Поле | Тип | Обмеження |
+|---|---|---|
+| Id | int | PK |
+| MemberId | int | обов'язкове; стане FK на Members, коли клієнти перейдуть на EF Core |
+| WorkoutId | int | обов'язкове, FK → Workouts, ON DELETE RESTRICT |
+| Date | DateOnly | обов'язкове, дата заняття |
+| Status | enum → string | обов'язкове, ≤20 (`Confirmed` \| `Cancelled`) |
+| CreatedAt | DateTime | обов'язкове, UTC |
+
+Індекси Bookings: `(WorkoutId, Date)` — швидкий підрахунок зайнятих місць; **унікальний** `(MemberId, WorkoutId, Date)` лише для `Status = 'Confirmed'` — захист від дубля на рівні БД (скасований запис не заважає записатися знову).
+
 ### Зв'язки
 
 - **Club → Workout — один-до-багатьох**: тренування проходить у конкретному клубі (філії). `Restrict` — не можна видалити клуб, поки в ньому є тренування.
+- **Workout → Booking — один-до-багатьох**: на одне тренування (у різні дати) є багато записів. `Restrict` — не можна видалити тренування, на яке є записи, щоб не втратити історію.
+- **Member → Booking — один-до-багатьох** (логічний зв'язок через `MemberId`; зовнішній ключ у БД з'явиться, коли `Members` перейдуть на EF Core). Існування й активність клієнта перевіряє `BookingService`.
 - **Membership ↔ Workout — багато-до-багатьох** через `MembershipWorkouts`: один абонемент включає кілька тренувань, одне тренування доступне в кількох абонементах. Видалення абонемента чи тренування каскадно видаляє лише рядки зв'язку.
 - **Trainer → Workout — один-до-багатьох** (підготовлено в `WorkoutConfiguration`, вмикається разом із сутністю Trainer). `Restrict` — не можна видалити тренера, у якого є тренування.
 
@@ -230,7 +334,7 @@ dotnet ef migrations list --project FitnessClub.Api
    Приклад: `HTTP GET /api/workouts?day=Monday → 200 за 6 мс`
 2. **`ExceptionHandlingMiddleware`** — централізована обробка винятків. Перехоплює всі необроблені винятки з контролерів, репозиторіїв і EF Core, обирає status code за типом винятку, повертає `ProblemDetails` і не розкриває клієнту внутрішню інформацію (текст винятку, stack trace). Повні деталі записуються в лог разом з `traceId`.
 
-Контролери абонементів і тренувань не формують відповіді з помилками вручну: вони кидають `NotFoundException` / `ConflictException` / `BadRequestException` (папка `Exceptions/`), а відповідь формує middleware.
+Контролери абонементів, тренувань, клубів і записів не формують відповіді з помилками вручну: вони кидають `NotFoundException` / `ConflictException` / `BadRequestException` (папка `Exceptions/`), а відповідь формує middleware.
 
 Для демонстрації помилки 500 у режимі Development є endpoint `GET /api/diagnostics/error`.
 
@@ -261,11 +365,11 @@ Data          — FitnessClubDbContext, Unit of Work, міграції
 
 | Шар | Компоненти |
 |---|---|
-| Controllers | `MembershipsController`, `WorkoutsController`, `AuthController`, `UsersController`, `DiagnosticsController` |
-| Services | `MembershipService`, `WorkoutService`, `WorkoutScheduleValidator`, `AuthService`, `JwtTokenService`, `SystemDateTimeProvider` |
-| Repositories | `MembershipRepository`, `WorkoutRepository` (EF Core); `InMemoryTrainerRepository`, `InMemoryMemberRepository` |
-| Models / Entities | `Membership`, `Workout`, `MembershipWorkout`, `Member`, `Trainer`, `AppUser` |
-| DTO | `DTOs/Memberships`, `DTOs/Workouts`, `DTOs/Members`, `DTOs/Trainers`, `DTOs/Auth` |
+| Controllers | `MembershipsController`, `WorkoutsController`, `ClubsController`, `BookingsController`, `AuthController`, `UsersController`, `DiagnosticsController` |
+| Services | `MembershipService`, `WorkoutService`, `ClubService`, `BookingService`, `WorkoutScheduleValidator`, `AuthService`, `JwtTokenService`, `SystemDateTimeProvider` |
+| Repositories | `MembershipRepository`, `WorkoutRepository`, `ClubRepository`, `BookingRepository` (EF Core); `InMemoryTrainerRepository`, `InMemoryMemberRepository` |
+| Models / Entities | `Membership`, `Workout`, `MembershipWorkout`, `Club`, `Booking`, `Member`, `Trainer`, `AppUser` |
+| DTO | `DTOs/Memberships`, `DTOs/Workouts`, `DTOs/Clubs`, `DTOs/Bookings`, `DTOs/Members`, `DTOs/Trainers`, `DTOs/Auth` |
 | Data / Infrastructure | `FitnessClubDbContext`, `UnitOfWork`, `IdentitySeeder`, `Configuraitons/`, `Migrations/`, `Extensions/`, `Middleware/` |
 
 ## Dependency Injection
@@ -276,7 +380,7 @@ Data          — FitnessClubDbContext, Unit of Work, міграції
 |---|---|---|
 | `FitnessClubDbContext` | **Scoped** | Один контекст на HTTP-запит: відстежує зміни лише цього запиту, не потокобезпечний |
 | `IUnitOfWork`, репозиторії EF Core | **Scoped** | Працюють із DbContext, тому живуть стільки ж, скільки він |
-| `IMembershipService`, `IWorkoutService`, `IAuthService` | **Scoped** | Залежать від Scoped-репозиторіїв і `UserManager` |
+| `IMembershipService`, `IWorkoutService`, `IClubService`, `IBookingService`, `IAuthService` | **Scoped** | Залежать від Scoped-репозиторіїв і `UserManager` |
 | `IWorkoutScheduleValidator` | **Transient** | Легкий, без власного стану — новий екземпляр на кожне використання |
 | `ITokenService` (`JwtTokenService`) | **Singleton** | Без стану між запитами, лише читає налаштування JWT; ключ підпису створюється один раз |
 | `IDateTimeProvider` | **Singleton** | Без стану, один на весь застосунок |
@@ -298,7 +402,7 @@ Data          — FitnessClubDbContext, Unit of Work, міграції
 
 ### Unit of Work
 
-`IUnitOfWork.ExecuteInTransactionAsync` виконує кілька операцій як одну транзакцію. Використовується під час **реєстрації** (створення облікового запису + призначення ролі User) і **зміни ролі**: якщо друга дія не вдасться, перша буде скасована, і в базі не залишиться користувача без ролі.
+`IUnitOfWork.ExecuteInTransactionAsync` виконує кілька операцій як одну транзакцію. Використовується під час **запису на тренування** (перевірка дубля та вільних місць разом зі створенням запису) і під час **реєстрації** (створення облікового запису + призначення ролі User) і **зміни ролі**: якщо друга дія не вдасться, перша буде скасована, і в базі не залишиться користувача без ролі.
 
 ### HttpClientFactory
 
@@ -316,8 +420,8 @@ Data          — FitnessClubDbContext, Unit of Work, міграції
 
 | Роль | Хто | Що може |
 |---|---|---|
-| `User` | кожен зареєстрований користувач | переглядати дані, свій профіль `GET /api/auth/me` |
-| `Administrator` | адміністратор клубу | усе, що User, + створювати/змінювати/видаляти абонементи й тренування, керувати користувачами |
+| `User` | кожен зареєстрований користувач | переглядати дані, записуватися на тренування й скасовувати запис, свій профіль `GET /api/auth/me` |
+| `Administrator` | адміністратор клубу | усе, що User, + створювати/змінювати/видаляти абонементи, тренування й клуби, видаляти записи, керувати користувачами |
 
 Під час першого запуску автоматично створюються обидві ролі та адміністратор з розділу `AdminUser` в `appsettings.json`:
 
@@ -353,6 +457,11 @@ Data          — FitnessClubDbContext, Unit of Work, міграції
 | `GET /api/workouts`, `/schedule`, `/{id}` | ✅ | ✅ | ✅ |
 | `POST/PUT/PATCH/DELETE /api/memberships…` | 401 | 403 | ✅ |
 | `POST/PUT/DELETE /api/workouts…` | 401 | 403 | ✅ |
+| `GET /api/clubs`, `GET /api/clubs/{id}` | ✅ | ✅ | ✅ |
+| `POST/PUT/DELETE /api/clubs…` | 401 | 403 | ✅ |
+| `GET /api/bookings/availability` | ✅ | ✅ | ✅ |
+| `GET /api/bookings`, `GET /api/bookings/{id}`, `POST /api/bookings`, `POST /api/bookings/{id}/cancel` | 401 | ✅ | ✅ |
+| `DELETE /api/bookings/{id}` | 401 | 403 | ✅ |
 | `GET /api/users`, `PUT /api/users/{id}/role` | 401 | 403 | ✅ |
 
 **401 Unauthorized** — токен не передано або він недійсний; **403 Forbidden** — токен дійсний, але роль не дозволяє операцію. Обидві відповіді — у форматі ProblemDetails.
@@ -373,13 +482,13 @@ FitnessClub.Api/
 ├── Mapping/         — перетворення Model ↔ DTO
 ├── Middleware/      — логування запитів і централізована обробка помилок
 ├── Models/          — доменні сутності + AppUser (користувач Identity)
-├── Repositories/    — доступ до даних (абонементи й тренування — EF Core, клієнти й тренери — поки в пам'яті)
+├── Repositories/    — доступ до даних (абонементи, тренування, клуби й записи — EF Core, клієнти й тренери — поки в пам'яті)
 ├── Services/        — бізнес-логіка (Service Layer) та їхні інтерфейси
 ├── Program.cs       — збирання застосунку й конвеєр middleware
 └── FitnessClub.Api.http — готові запити для перевірки
 ```
 
-Контролери залежать лише від інтерфейсів сервісів (`IMembershipService`, `IWorkoutService`, `IAuthService`), сервіси — від інтерфейсів репозиторіїв. Репозиторії будують LINQ-запити (фільтрація, пошук, сортування, `Include` для пов'язаних даних), а EF Core перетворює їх на SQL. Усі операції з базою асинхронні: `ToListAsync`, `FirstOrDefaultAsync`, `AnyAsync`, `SaveChangesAsync`, `ExecuteDeleteAsync`. SQL-запити видно в консолі під час роботи.
+Контролери залежать лише від інтерфейсів сервісів (`IMembershipService`, `IWorkoutService`, `IClubService`, `IBookingService`, `IAuthService`), сервіси — від інтерфейсів репозиторіїв. Репозиторії будують LINQ-запити (фільтрація, пошук, сортування, `Include` для пов'язаних даних), а EF Core перетворює їх на SQL. Усі операції з базою асинхронні: `ToListAsync`, `FirstOrDefaultAsync`, `AnyAsync`, `SaveChangesAsync`, `ExecuteDeleteAsync`. SQL-запити видно в консолі під час роботи.
 
 
 ## Запуск
@@ -401,6 +510,3 @@ dotnet run --project FitnessClub.Api --launch-profile http
 (корінь http://localhost:5191 теж перенаправляє на Swagger).
 
 Також можна надсилати запити з файлу `FitnessClub.Api/FitnessClub.Api.http` у Visual Studio / Rider / VS Code (розширення REST Client).
-
-
-
