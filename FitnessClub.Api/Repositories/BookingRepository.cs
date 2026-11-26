@@ -14,6 +14,7 @@ namespace FitnessClub.Api.Repositories
         Task AddAsync(Booking booking);
         Task SaveChangesAsync();
         Task DeleteAsync(Booking booking);
+        Task<bool> HasBookingsForMemberAsync(int memberId);
     }
 
     /// <summary>
@@ -103,5 +104,8 @@ namespace FitnessClub.Api.Repositories
             _db.Bookings.Remove(booking);
             await _db.SaveChangesAsync();
         }
+
+        public Task<bool> HasBookingsForMemberAsync(int memberId) =>
+                                _db.Bookings.AnyAsync(b => b.MemberId == memberId);
     }
 }

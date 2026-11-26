@@ -1,4 +1,5 @@
 namespace FitnessClub.Api.Exceptions;
+
 public abstract class AppException : Exception
 {
     public int StatusCode { get; }
@@ -33,6 +34,13 @@ public class UnauthorizedException : AppException
 {
     public UnauthorizedException(string message)
         : base(StatusCodes.Status401Unauthorized, message)
+    {
+    }
+}
+public class ForbiddenException : AppException
+{
+    public ForbiddenException(string message)
+        : base(StatusCodes.Status403Forbidden, message)
     {
     }
 }

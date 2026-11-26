@@ -1,4 +1,5 @@
-﻿using FitnessClub.Api.Data;
+﻿using FitnessClub.Api.Auth;
+using FitnessClub.Api.Data;
 using FitnessClub.Api.DTOs.Bookings;
 using FitnessClub.Api.Exceptions;
 using FitnessClub.Api.Mapping;
@@ -25,14 +26,16 @@ namespace FitnessClub.Api.Services
         private readonly IMembershipRepository _memberships;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IDateTimeProvider _clock;
+        private readonly ICurrentUser _currentUser;
 
         public BookingService(
-        IBookingRepository bookings,
-        IWorkoutRepository workouts,
-        IMemberRepository members,
-        IMembershipRepository memberships,
-        IUnitOfWork unitOfWork,
-        IDateTimeProvider clock)
+            IBookingRepository bookings,
+            IWorkoutRepository workouts,
+            IMemberRepository members,
+            IMembershipRepository memberships,
+            IUnitOfWork unitOfWork,
+            IDateTimeProvider clock,
+            ICurrentUser currentUser)
         {
             _bookings = bookings;
             _workouts = workouts;
@@ -40,10 +43,15 @@ namespace FitnessClub.Api.Services
             _memberships = memberships;
             _unitOfWork = unitOfWork;
             _clock = clock;
+            _currentUser = currentUser;
         }
 
         public async Task<IReadOnlyList<BookingDto>> GetAllAsync(BookingQueryParameters query)
         {
+            // Звичайний користувач бачить лише власні записи.
+            if (!_currentUser.IsAdministrator)
+                query.MemberId = (await GetOwnMemberAsync()).Id;
+
             var items = await _bookings.GetAllAsync(query);
             return items.Select(b => b.ToDto()).ToList();
         }
@@ -52,6 +60,8 @@ namespace FitnessClub.Api.Services
         {
             var booking = await _bookings.GetByIdAsync(id)
                 ?? throw NotFound(id);
+
+            await EnsureCanAccessAsync(booking);
             return booking.ToDto();
         }
 
@@ -64,8 +74,7 @@ namespace FitnessClub.Api.Services
 
             EnsureDateIsValid(date, workout);
 
-            var member = _members.GetById(dto.MemberId)
-                ?? throw new BadRequestException($"Клієнта з id={dto.MemberId} не існує.");
+            var member = await ResolveMemberAsync(dto.MemberId);
 
             if (!member.IsActive)
                 throw new BadRequestException("Клієнт неактивний, запис неможливий.");
@@ -84,7 +93,7 @@ namespace FitnessClub.Api.Services
                     throw new ConflictException(
                         $"На \"{workout.Name}\" {date:yyyy-MM-dd} немає вільних місць ({workout.MaxParticipants} з {workout.MaxParticipants} зайнято).");
 
-                var booking = dto.ToEntity(_clock.UtcNow);
+                var booking = dto.ToEntity(member.Id, _clock.UtcNow);
                 await _bookings.AddAsync(booking);
                 return booking.Id;
             });
@@ -99,6 +108,8 @@ namespace FitnessClub.Api.Services
         {
             var booking = await _bookings.GetByIdAsync(id)
                 ?? throw NotFound(id);
+
+            await EnsureCanAccessAsync(booking);
 
             if (booking.Status == BookingStatus.Cancelled)
                 throw new ConflictException("Запис уже скасовано.");
@@ -135,6 +146,54 @@ namespace FitnessClub.Api.Services
         // ---------- допоміжні методи ----------
 
         private DateOnly Today() => DateOnly.FromDateTime(_clock.UtcNow);
+
+        /// <summary>
+        /// Адміністратор записує вказаного клієнта (memberId обов'язковий).
+        /// Звичайний користувач записує лише себе: клієнт визначається за email акаунта.
+        /// </summary>
+        private async Task<Member> ResolveMemberAsync(int? requestedMemberId)
+        {
+            if (_currentUser.IsAdministrator)
+            {
+                if (requestedMemberId is null)
+                    throw new BadRequestException("Адміністратор має вказати memberId.");
+
+                return await _members.GetByIdAsync(requestedMemberId.Value)
+                    ?? throw new BadRequestException($"Клієнта з id={requestedMemberId} не існує.");
+            }
+
+            var own = await GetOwnMemberAsync();
+
+            if (requestedMemberId.HasValue && requestedMemberId.Value != own.Id)
+                throw new ForbiddenException("Ви можете записувати на тренування лише себе.");
+
+            return own;
+        }
+
+        /// <summary>Клієнт, що відповідає акаунту поточного користувача (за email).</summary>
+        private async Task<Member> GetOwnMemberAsync()
+        {
+            var email = _currentUser.Email;
+
+            var member = string.IsNullOrWhiteSpace(email)
+                ? null
+                : await _members.GetByEmailAsync(email);
+
+            return member
+                ?? throw new ForbiddenException(
+                    "Для вашого акаунта не знайдено профіль клієнта. Зверніться до адміністратора клубу.");
+        }
+
+        /// <summary>Чужий запис звичайному користувачу не показується (404, ніби його немає).</summary>
+        private async Task EnsureCanAccessAsync(Booking booking)
+        {
+            if (_currentUser.IsAdministrator)
+                return;
+
+            var own = await GetOwnMemberAsync();
+            if (booking.MemberId != own.Id)
+                throw NotFound(booking.Id);
+        }
 
         private void EnsureDateIsValid(DateOnly date, Workout workout)
         {
