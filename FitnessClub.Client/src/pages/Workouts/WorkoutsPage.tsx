@@ -7,16 +7,7 @@ import {
   type WorkoutAvailability,
 } from '../../api/fitnessClubService'
 import { useAuth } from '../../contexts/AuthContext'
-
-const days: Record<number, string> = {
-  0: 'Неділя',
-  1: 'Понеділок',
-  2: 'Вівторок',
-  3: 'Середа',
-  4: 'Четвер',
-  5: 'П’ятниця',
-  6: 'Субота',
-}
+import { getDayName, getNextWorkoutDate } from '../../utils/dates'
 
 const levels: Record<string, string> = {
   Beginner: 'Початковий',
@@ -25,30 +16,6 @@ const levels: Record<string, string> = {
   '0': 'Початковий',
   '1': 'Середній',
   '2': 'Високий',
-}
-
-function getNextWorkoutDate(dayOfWeek: number | string) {
-  const today = new Date()
-  const targetDay = Number(dayOfWeek)
-  const currentDay = today.getDay()
-  const daysUntil = (targetDay - currentDay + 7) % 7
-
-  const nextDate = new Date(today)
-  nextDate.setDate(today.getDate() + daysUntil)
-
-  return [
-    nextDate.getFullYear(),
-    String(nextDate.getMonth() + 1).padStart(2, '0'),
-    String(nextDate.getDate()).padStart(2, '0'),
-  ].join('-')
-}
-
-function getDayName(day: number | string) {
-  if (typeof day === 'number') {
-    return days[day] ?? String(day)
-  }
-
-  return days[Number(day)] ?? day
 }
 
 function getLevelName(level: number | string) {

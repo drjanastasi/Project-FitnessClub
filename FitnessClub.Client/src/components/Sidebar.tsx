@@ -15,6 +15,8 @@ function Sidebar() {
     return item
   }).join(', ')
 
+  const isAdmin = user?.roles.includes('Administrator') ?? false
+
   return (
     <aside className="sidebar">
       <div className="logo">
@@ -48,11 +50,19 @@ function Sidebar() {
         </NavLink>
 
         {isAuthenticated && (
-          <NavLink to="/profile" className={({ isActive }) =>
-            `nav-item ${isActive ? 'active' : ''}`
-          }>
-            <span>◉</span> Мій профіль
-          </NavLink>
+          <>
+            <NavLink to="/bookings" className={({ isActive }) =>
+              `nav-item ${isActive ? 'active' : ''}`
+            }>
+              <span>◷</span> {isAdmin ? 'Усі записи' : 'Мої записи'}
+            </NavLink>
+
+            <NavLink to="/profile" className={({ isActive }) =>
+              `nav-item ${isActive ? 'active' : ''}`
+            }>
+              <span>◉</span> Мій профіль
+            </NavLink>
+          </>
         )}
       </nav>
 

@@ -20,7 +20,7 @@ export interface Club {
   address: string
   phone: string
   email: string
-  workHous: string | null
+  workHours: string | null
 }
 
 
@@ -64,9 +64,9 @@ export interface LoginData {
 
 export interface Booking {
   id: number
-  memverId: number
+  memberId: number
   workoutId: number
-  workotName: string
+  workoutName: string
   dayOfWeek: number | string
   startTime: string
   date: string
@@ -85,6 +85,7 @@ export interface WorkoutAvailability {
 export interface CreateBookingData {
   workoutId: number
   date: string
+  memberId?: number
 }
 
 export const fitnessClubService = {
