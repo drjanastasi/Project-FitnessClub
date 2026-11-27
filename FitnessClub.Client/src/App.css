@@ -1223,3 +1223,132 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Записи на тренування */
+
+.bookings-page {
+  animation: page-appear 0.3s ease;
+}
+
+.bookings-header {
+  margin-bottom: 28px;
+}
+
+.bookings-header h1 {
+  font-size: 32px;
+  color: #172554;
+  margin: 0;
+}
+
+.bookings-subtitle {
+  color: #64748b;
+  margin: 8px 0 0;
+}
+
+.bookings-section {
+  margin-bottom: 34px;
+}
+
+.bookings-section h2 {
+  font-size: 18px;
+  color: #172554;
+  margin: 0 0 14px;
+}
+
+.bookings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.booking-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  background: white;
+  border: 1px solid #e8edf3;
+  border-radius: 18px;
+  padding: 20px 24px;
+}
+
+.booking-info h3 {
+  margin: 0 0 6px;
+  font-size: 18px;
+  color: #172554;
+}
+
+.booking-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.booking-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.booking-status {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.booking-status.confirmed {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.booking-status.cancelled {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.booking-cancel-button {
+  border: 1px solid #fecaca;
+  background: white;
+  color: #dc2626;
+  font-weight: 700;
+  padding: 9px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.booking-cancel-button:hover:not(:disabled) {
+  background: #fef2f2;
+}
+
+.booking-cancel-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.booking-notice {
+  padding: 14px 18px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.booking-notice.success {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.booking-notice.error {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+@media (max-width: 640px) {
+  .booking-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

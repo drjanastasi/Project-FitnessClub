@@ -20,6 +20,7 @@ import MembershipsPage from './pages/Memberships/MembershipsPage'
 import ProfilePage from './pages/Profile/ProfilePage'
 import LoginPage from './pages/Auth/LoginPage'
 import RegisterPage from './pages/Auth/RegisterPage'
+import BookingsPage from './pages/Bookings/BookingsPage'
 
 import './App.css'
 
@@ -68,6 +69,9 @@ function App() {
 
           {/* Захищені сторінки */}
           <Route element={<ProtectedRoute />}>
+            <Route path="/bookings" element={<AppLayout />}>
+              <Route index element={<BookingsPage />} />
+            </Route>
             <Route path="/profile" element={<AppLayout />}>
               <Route index element={<ProfilePage />} />
             </Route>

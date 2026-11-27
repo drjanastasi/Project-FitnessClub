@@ -67,7 +67,7 @@ function ClubsPage() {
                 <div className="club-contact">
                   <p>Телефон: {club.phone}</p>
                   <p>Email: {club.email}</p>
-                  <p>Години роботи: {club.workHous || 'Не вказано'}</p>
+                  <p>Години роботи: {club.workHours || 'Не вказано'}</p>
                 </div>
               </div>
             </article>
