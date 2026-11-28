@@ -23,7 +23,8 @@ function getLevelName(level: number | string) {
 }
 
 function WorkoutsPage() {
-  const { isAuthenticated } = useAuth()
+  const { user, isAuthenticated } = useAuth()
+  const isAdmin = user?.roles.includes('Administrator') ?? false
   const navigate = useNavigate()
 
   const [workouts, setWorkouts] = useState<Workout[]>([])
@@ -113,6 +114,12 @@ function WorkoutsPage() {
     const date =
       selectedDates[workoutId] ??
       getNextWorkoutDate(workout.dayOfWeek)
+
+    // Адміністратор записує не себе, а клієнта: переходимо до керування записами.
+    if (isAdmin) {
+      navigate(`/admin/bookings?workoutId=${workoutId}&date=${date}`)
+      return
+    }
 
     setBookingLoading((prev) => ({
       ...prev,
@@ -257,7 +264,9 @@ function WorkoutsPage() {
                   >
                     {bookingLoading[workout.id]
                       ? 'Записуємо...'
-                      : isAuthenticated
+                      : isAdmin
+                        ? 'Записати клієнта'
+                        : isAuthenticated
                         ? 'Записатися'
                         : 'Увійти для запису'}
                   </button>

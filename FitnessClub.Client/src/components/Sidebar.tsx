@@ -2,6 +2,15 @@
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
+const adminLinks = [
+  { to: '/admin/workouts', label: 'Тренування' },
+  { to: '/admin/clubs', label: 'Клуби' },
+  { to: '/admin/memberships', label: 'Абонементи' },
+  { to: '/admin/members', label: 'Клієнти' },
+  { to: '/admin/bookings', label: 'Записи' },
+  { to: '/admin/users', label: 'Користувачі' },
+]
+
 function Sidebar() {
   const { user, isAuthenticated } = useAuth()
 
@@ -49,35 +58,37 @@ function Sidebar() {
           <span>⌖</span> Клуби
         </NavLink>
 
-        {isAdmin && (
-          <NavLink to="/admin/workouts" className={({ isActive }) =>
+        {isAuthenticated && !isAdmin && (
+          <NavLink to="/bookings" className={({ isActive }) =>
             `nav-item ${isActive ? 'active' : ''}`
           }>
-            <span>⚙</span> Керування тренуваннями
-          </NavLink>
-        )}
-
-        {isAdmin && (
-          <NavLink to="/admin/clubs" className={({ isActive }) =>
-            `nav-item ${isActive ? 'active' : ''}`
-          }>
-            <span>⚙</span> Керування клубами
+            <span>◷</span> Мої записи
           </NavLink>
         )}
 
         {isAuthenticated && (
-          <>
-            <NavLink to="/bookings" className={({ isActive }) =>
-              `nav-item ${isActive ? 'active' : ''}`
-            }>
-              <span>◷</span> {isAdmin ? 'Усі записи' : 'Мої записи'}
-            </NavLink>
+          <NavLink to="/profile" className={({ isActive }) =>
+            `nav-item ${isActive ? 'active' : ''}`
+          }>
+            <span>◉</span> Мій профіль
+          </NavLink>
+        )}
 
-            <NavLink to="/profile" className={({ isActive }) =>
-              `nav-item ${isActive ? 'active' : ''}`
-            }>
-              <span>◉</span> Мій профіль
-            </NavLink>
+        {isAdmin && (
+          <>
+            <p className="nav-section-title">Адміністрування</p>
+
+            {adminLinks.map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                className={({ isActive }) =>
+                  `nav-item ${isActive ? 'active' : ''}`
+                }
+              >
+                <span>⚙</span> {link.label}
+              </NavLink>
+            ))}
           </>
         )}
       </nav>

@@ -454,7 +454,7 @@
     padding: 0;
   }
 
-  .logo > span:last-child,
+  .logo>span:last-child,
   .nav-item:not(.active) {
     overflow: hidden;
   }
@@ -473,7 +473,7 @@
     justify-content: center;
   }
 
-  .sidebar-bottom > div:last-child {
+  .sidebar-bottom>div:last-child {
     display: none;
   }
 
@@ -608,7 +608,7 @@
   margin: 0 0 12px;
 }
 
-.training-content > p {
+.training-content>p {
   font-size: 14px;
   color: #64748b;
   line-height: 1.6;
@@ -1358,7 +1358,7 @@
 
 .admin-clubs-page {
   padding: 10px 0 30px;
-  animation: fadeIn 0.3s ease;
+  animation: page-appear 0.3s ease;
 }
 
 .admin-clubs-page h1 {
@@ -1518,4 +1518,128 @@
     width: 100%;
     margin: 5px 0;
   }
+}
+
+
+/* ===== Форма тренування в адмінці та допоміжні блоки ===== */
+
+.admin-workout-form {
+  margin: 20px 0 24px;
+  max-width: 560px;
+}
+
+.admin-workout-form:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.admin-workout-form .training-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-workout-form h2 {
+  margin: 0 0 8px;
+  color: #172554;
+  font-size: 20px;
+}
+
+.admin-workout-form label {
+  margin-top: 6px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.admin-workout-form input,
+.admin-workout-form select,
+.admin-workout-form textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #dbe3ed;
+  border-radius: 9px;
+  background: #f8fafc;
+  color: #1e293b;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.admin-workout-form input:focus,
+.admin-workout-form select:focus,
+.admin-workout-form textarea:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.admin-workout-form textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.admin-workout-form .training-footer {
+  justify-content: flex-start;
+}
+
+/* Блок запису на тренування (сторінка «Тренування») */
+
+.workout-booking {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.workout-booking label {
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.workout-booking input {
+  padding: 9px 12px;
+  border: 1px solid #dbe3ed;
+  border-radius: 9px;
+  background: #f8fafc;
+}
+
+.availability-info {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.booking-message {
+  margin: 0;
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Заголовок сторінки профілю */
+
+.page-heading {
+  margin-bottom: 24px;
+}
+
+.page-heading h1 {
+  margin: 0;
+  color: #172554;
+  font-size: 32px;
+}
+
+.page-heading p {
+  margin: 8px 0 0;
+  color: #64748b;
+}
+
+/* Заголовок розділу в меню */
+
+.nav-section-title {
+  margin: 18px 0 4px;
+  padding: 0 16px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }

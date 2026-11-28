@@ -12,6 +12,16 @@ function Header() {
     '/workouts': 'Тренування',
     '/clubs': 'Клуби',
     '/memberships': 'Абонементи',
+    '/bookings': 'Мої записи',
+    '/profile': 'Профіль',
+    '/login': 'Вхід',
+    '/register': 'Реєстрація',
+    '/admin/workouts': 'Керування тренуваннями',
+    '/admin/clubs': 'Керування клубами',
+    '/admin/memberships': 'Керування абонементами',
+    '/admin/members': 'Керування клієнтами',
+    '/admin/bookings': 'Керування записами',
+    '/admin/users': 'Керування користувачами',
   }
 
   const currentTitle = pageTitles[location.pathname] ?? 'FitnessClub'

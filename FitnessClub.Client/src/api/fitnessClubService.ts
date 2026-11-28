@@ -120,6 +120,84 @@ export interface CreateBookingData {
   memberId?: number
 }
 
+export interface WorkoutShort {
+  id: number
+  name: string
+  dayOfWeek: number | string
+  startTime: string
+  level: number | string
+}
+
+export interface MembershipDetails {
+  id: number
+  name: string
+  description: string | null
+  price: number
+  durationDays: number
+  isActive: boolean
+  workouts: WorkoutShort[]
+}
+
+export interface MembershipFormData {
+  name: string
+  description: string | null
+  price: number
+  durationDays: number
+  isActive: boolean
+}
+
+export interface Member {
+  id: number
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  birthDate: string
+  isActive: boolean
+  membershipId: number
+}
+
+export interface MemberFormData {
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  birthDate: string
+  isActive: boolean
+  membershipId: number
+}
+
+export interface MemberFilters {
+  isActive?: boolean
+  search?: string
+}
+
+export type UserRole = 'User' | 'Administrator'
+
+export interface BookingFilters {
+  memberId?: number
+  workoutId?: number
+  clubId?: number
+  status?: string
+  dateFrom?: string
+  dateTo?: string
+  sortBy?: 'date' | 'createdAt'
+  desc?: boolean
+}
+
+/** Збирає query-рядок, пропускаючи порожні значення. */
+function buildQuery(params: object): string {
+  const search = new URLSearchParams()
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === '') continue
+    search.set(key, String(value))
+  }
+
+  const query = search.toString()
+  return query ? `?${query}` : ''
+}
+
 export const fitnessClubService = {
   getWorkouts: () => apiRequest<Workout[]>('/workouts'),
 
@@ -161,8 +239,77 @@ export const fitnessClubService = {
 
   getMemberships: () => apiRequest<Membership[]>('/memberships'),
 
-  getBookings: () =>
-  apiRequest<Booking[]>('/bookings'),
+  getMembership: (id: number) =>
+    apiRequest<MembershipDetails>(`/memberships/${id}`),
+
+  createMembership: (data: MembershipFormData) =>
+    apiRequest<Membership>('/memberships', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateMembership: (id: number, data: MembershipFormData) =>
+    apiRequest<Membership>(`/memberships/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  updateMembershipStatus: (id: number, isActive: boolean) =>
+    apiRequest<Membership>(`/memberships/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isActive }),
+    }),
+
+  deleteMembership: (id: number) =>
+    apiRequest<void>(`/memberships/${id}`, {
+      method: 'DELETE',
+    }),
+
+  addWorkoutToMembership: (id: number, workoutId: number) =>
+    apiRequest<MembershipDetails>(`/memberships/${id}/workouts/${workoutId}`, {
+      method: 'POST',
+    }),
+
+  removeWorkoutFromMembership: (id: number, workoutId: number) =>
+    apiRequest<void>(`/memberships/${id}/workouts/${workoutId}`, {
+      method: 'DELETE',
+    }),
+
+  getMembers: (filters: MemberFilters = {}) =>
+    apiRequest<Member[]>(`/members${buildQuery(filters)}`),
+
+  createMember: (data: MemberFormData) =>
+    apiRequest<Member>('/members', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateMember: (id: number, data: MemberFormData) =>
+    apiRequest<Member>(`/members/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteMember: (id: number) =>
+    apiRequest<void>(`/members/${id}`, {
+      method: 'DELETE',
+    }),
+
+  getUsers: () => apiRequest<UserProfile[]>('/users'),
+
+  changeUserRole: (id: string, role: UserRole) =>
+    apiRequest<UserProfile>(`/users/${id}/role`, {
+      method: 'PUT',
+      body: JSON.stringify({ role }),
+    }),
+
+  getBookings: (filters: BookingFilters = {}) =>
+    apiRequest<Booking[]>(`/bookings${buildQuery(filters)}`),
+
+  deleteBooking: (id: number) =>
+    apiRequest<void>(`/bookings/${id}`, {
+      method: 'DELETE',
+    }),
 
   getWorkoutAvailability: (workoutId: number, date: string) =>
     apiRequest<WorkoutAvailability>(
