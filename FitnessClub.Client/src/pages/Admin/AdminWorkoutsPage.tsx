@@ -1,31 +1,27 @@
 import { useEffect, useState } from 'react'
 import {
   fitnessClubService,
+  type Club,
   type Workout,
   type WorkoutFormData,
 } from '../../api/fitnessClubService'
+import { formatTime, getDayIndex, getDayName } from '../../utils/dates'
+import {
+  errorMessage,
+  getLevelIndex,
+  getLevelName,
+  levelOptions,
+} from '../../utils/labels'
+import './Admin.css'
 
-const days = [
-  'Неділя',
-  'Понеділок',
-  'Вівторок',
-  'Середа',
-  'Четвер',
-  'П’ятниця',
-  'Субота',
-]
-
-const levels = [
-  { value: 0, label: 'Початковий' },
-  { value: 1, label: 'Середній' },
-  { value: 2, label: 'Високий' },
-]
+// Тиждень показуємо з понеділка; значення — індекс дня (0 = неділя), як очікує API.
+const weekOrder = [1, 2, 3, 4, 5, 6, 0]
 
 const emptyForm: WorkoutFormData = {
   name: '',
   description: '',
   trainerId: 1,
-  clubId: 1,
+  clubId: 0,
   dayOfWeek: 1,
   startTime: '18:00',
   durationMinutes: 60,
@@ -35,6 +31,7 @@ const emptyForm: WorkoutFormData = {
 
 function AdminWorkoutsPage() {
   const [workouts, setWorkouts] = useState<Workout[]>([])
+  const [clubs, setClubs] = useState<Club[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
@@ -45,14 +42,10 @@ function AdminWorkoutsPage() {
   const [saving, setSaving] = useState(false)
 
   async function loadWorkouts() {
-    setLoading(true)
-    setError('')
-
     try {
-      const result = await fitnessClubService.getWorkouts()
-      setWorkouts(result)
-    } catch {
-      setError('Не вдалося завантажити тренування.')
+      setWorkouts(await fitnessClubService.getWorkouts())
+    } catch (err) {
+      setError(errorMessage(err, 'Не вдалося завантажити тренування.'))
     } finally {
       setLoading(false)
     }
@@ -60,6 +53,14 @@ function AdminWorkoutsPage() {
 
   useEffect(() => {
     loadWorkouts()
+
+    // Клуби потрібні для вибору в формі та для назв у списку.
+    fitnessClubService
+      .getClubs()
+      .then(setClubs)
+      .catch((err: unknown) => {
+        setError(errorMessage(err, 'Не вдалося завантажити клуби.'))
+      })
   }, [])
 
   function handleChange<K extends keyof WorkoutFormData>(
@@ -73,8 +74,9 @@ function AdminWorkoutsPage() {
   }
 
   function openCreateForm() {
-    setForm(emptyForm)
+    setForm({ ...emptyForm, clubId: clubs[0]?.id ?? 0 })
     setEditingId(null)
+    setError('')
     setMessage('')
     setFormVisible(true)
   }
@@ -85,34 +87,15 @@ function AdminWorkoutsPage() {
       description: workout.description ?? '',
       trainerId: workout.trainerId,
       clubId: workout.clubId,
-      dayOfWeek:
-        typeof workout.dayOfWeek === 'number'
-            ? workout.dayOfWeek
-            : [
-                'Sunday',
-                'Monday',
-                'Tuesday',
-                'Wednesday',
-                'Thursday',
-                'Friday',
-                'Saturday',
-            ].indexOf(String(workout.dayOfWeek)),
-      startTime: workout.startTime.slice(0, 5),
+      dayOfWeek: getDayIndex(workout.dayOfWeek),
+      startTime: formatTime(workout.startTime),
       durationMinutes: workout.durationMinutes,
-      level:
-        typeof workout.level === 'number'
-            ? workout.level
-            : workout.level === 'Beginner'
-            ? 0
-            : workout.level === 'Intermediate'
-                ? 1
-                : workout.level === 'Advanced'
-                ? 2
-                : 0,
+      level: getLevelIndex(workout.level),
       maxParticipants: workout.maxParticipants,
     })
 
     setEditingId(workout.id)
+    setError('')
     setMessage('')
     setFormVisible(true)
   }
@@ -138,19 +121,15 @@ function AdminWorkoutsPage() {
 
       await loadWorkouts()
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Не вдалося зберегти тренування.',
-      )
+      setError(errorMessage(err, 'Не вдалося зберегти тренування.'))
     } finally {
       setSaving(false)
     }
   }
 
-  async function handleDelete(id: number) {
+  async function handleDelete(workout: Workout) {
     const confirmed = window.confirm(
-      'Ви дійсно хочете видалити це тренування?',
+      `Ви дійсно хочете видалити тренування «${workout.name}»?`,
     )
 
     if (!confirmed) {
@@ -161,21 +140,26 @@ function AdminWorkoutsPage() {
     setMessage('')
 
     try {
-      await fitnessClubService.deleteWorkout(id)
+      await fitnessClubService.deleteWorkout(workout.id)
       setMessage('Тренування успішно видалено.')
+
+      if (editingId === workout.id) {
+        setFormVisible(false)
+        setEditingId(null)
+        setForm(emptyForm)
+      }
+
       await loadWorkouts()
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Не вдалося видалити тренування.',
-      )
+      setError(errorMessage(err, 'Не вдалося видалити тренування.'))
     }
   }
 
   if (loading) {
     return <p className="page-message">Завантаження тренувань...</p>
   }
+
+  const clubNames = new Map(clubs.map((club) => [club.id, club.name]))
 
   return (
     <div className="workouts-page">
@@ -187,15 +171,15 @@ function AdminWorkoutsPage() {
         </p>
       </div>
 
-      <button className="card-button" onClick={openCreateForm}>
+      <button className="admin-btn admin-btn-primary" onClick={openCreateForm}>
         + Додати тренування
       </button>
 
-      {error && <p className="error-message">{error}</p>}
-      {message && <p className="booking-message">{message}</p>}
+      {error && <p className="admin-notice error">{error}</p>}
+      {message && <p className="admin-notice success">{message}</p>}
 
       {formVisible && (
-        <form className="training-card" onSubmit={handleSubmit}>
+        <form className="training-card admin-workout-form" onSubmit={handleSubmit}>
           <div className="training-content">
             <h2>
               {editingId === null
@@ -215,13 +199,11 @@ function AdminWorkoutsPage() {
             <label>Опис</label>
             <textarea
               value={form.description ?? ''}
-              onChange={(e) =>
-                handleChange('description', e.target.value)
-              }
+              onChange={(e) => handleChange('description', e.target.value)}
               maxLength={500}
             />
 
-            <label>Trainer ID</label>
+            <label>ID тренера</label>
             <input
               type="number"
               min={1}
@@ -232,16 +214,21 @@ function AdminWorkoutsPage() {
               required
             />
 
-            <label>Club ID</label>
-            <input
-              type="number"
-              min={1}
+            <label>Клуб</label>
+            <select
               value={form.clubId}
-              onChange={(e) =>
-                handleChange('clubId', Number(e.target.value))
-              }
+              onChange={(e) => handleChange('clubId', Number(e.target.value))}
               required
-            />
+            >
+              <option value={0} disabled>
+                Оберіть клуб
+              </option>
+              {clubs.map((club) => (
+                <option value={club.id} key={club.id}>
+                  {club.name}
+                </option>
+              ))}
+            </select>
 
             <label>День тижня</label>
             <select
@@ -250,9 +237,9 @@ function AdminWorkoutsPage() {
                 handleChange('dayOfWeek', Number(e.target.value))
               }
             >
-              {days.map((day, index) => (
+              {weekOrder.map((index) => (
                 <option value={index} key={index}>
-                  {day}
+                  {getDayName(index)}
                 </option>
               ))}
             </select>
@@ -280,11 +267,9 @@ function AdminWorkoutsPage() {
             <label>Рівень складності</label>
             <select
               value={form.level}
-              onChange={(e) =>
-                handleChange('level', Number(e.target.value))
-              }
+              onChange={(e) => handleChange('level', Number(e.target.value))}
             >
-              {levels.map((level) => (
+              {levelOptions.map((level) => (
                 <option value={level.value} key={level.value}>
                   {level.label}
                 </option>
@@ -307,7 +292,7 @@ function AdminWorkoutsPage() {
               <button
                 type="submit"
                 className="card-button"
-                disabled={saving}
+                disabled={saving || form.clubId === 0}
               >
                 {saving ? 'Збереження...' : 'Зберегти'}
               </button>
@@ -333,19 +318,18 @@ function AdminWorkoutsPage() {
               <div className="training-content">
                 <h3>{workout.name}</h3>
 
-                <p>
-                  {workout.description || 'Опис відсутній.'}
-                </p>
+                <p>{workout.description || 'Опис відсутній.'}</p>
 
                 <div className="workout-details">
-                  <span>
-                    📅 {days[Number(workout.dayOfWeek)]}
-                  </span>
-                  <span>🕒 {workout.startTime}</span>
+                  <span>📅 {getDayName(workout.dayOfWeek)}</span>
+                  <span>🕒 {formatTime(workout.startTime)}</span>
                   <span>⏱ {workout.durationMinutes} хв</span>
+                  <span>📊 {getLevelName(workout.level)}</span>
                   <span>👥 {workout.maxParticipants} учасників</span>
-                  <span>🏋️ Trainer №{workout.trainerId}</span>
-                  <span>📍 Club №{workout.clubId}</span>
+                  <span>🏋️ Тренер №{workout.trainerId}</span>
+                  <span>
+                    📍 {clubNames.get(workout.clubId) ?? `Клуб №${workout.clubId}`}
+                  </span>
                 </div>
 
                 <div className="training-footer">
@@ -358,7 +342,7 @@ function AdminWorkoutsPage() {
 
                   <button
                     className="card-button"
-                    onClick={() => handleDelete(workout.id)}
+                    onClick={() => handleDelete(workout)}
                   >
                     Видалити
                   </button>

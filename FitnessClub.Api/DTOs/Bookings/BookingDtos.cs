@@ -6,9 +6,9 @@ namespace FitnessClub.Api.DTOs.Bookings
     /// <summary>Запис на тренування у відповіді API.</summary>
     public record BookingDto(
         int Id,
-        int MemverId,
+        int MemberId,
         int WorkoutId,
-        string WorkotName,
+        string WorkoutName,
         DayOfWeek DayOfWeek,
         TimeOnly StartTime,
         DateOnly Date,

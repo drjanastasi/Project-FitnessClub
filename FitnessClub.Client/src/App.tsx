@@ -23,6 +23,10 @@ import RegisterPage from './pages/Auth/RegisterPage'
 import BookingsPage from './pages/Bookings/BookingsPage'
 import AdminWorkoutsPage from './pages/Admin/AdminWorkoutsPage'
 import AdminClubsPage from './pages/Admin/AdminClubsPage'
+import AdminMembershipsPage from './pages/Admin/AdminMembershipsPage'
+import AdminMembersPage from './pages/Admin/AdminMembersPage'
+import AdminBookingsPage from './pages/Admin/AdminBookingsPage'
+import AdminUsersPage from './pages/Admin/AdminUsersPage'
 
 import './App.css'
 
@@ -99,15 +103,19 @@ function App() {
             <Route path="/profile" element={<AppLayout />}>
               <Route index element={<ProfilePage />} />
             </Route>
-                      {/* Адміністративні сторінки */}
-          <Route element={<AdminRoute />}>
-            <Route path="/admin/workouts" element={<AppLayout />}>
-              <Route index element={<AdminWorkoutsPage />} />
-            </Route>
-            <Route path="/admin/clubs" element={<AppLayout />}>
-              <Route index element={<AdminClubsPage />} />
-            </Route>
           </Route>
+
+          {/* Адміністративні сторінки */}
+          <Route element={<AdminRoute />}>
+            <Route path="/admin" element={<AppLayout />}>
+              <Route index element={<Navigate to="/admin/workouts" replace />} />
+              <Route path="workouts" element={<AdminWorkoutsPage />} />
+              <Route path="clubs" element={<AdminClubsPage />} />
+              <Route path="memberships" element={<AdminMembershipsPage />} />
+              <Route path="members" element={<AdminMembersPage />} />
+              <Route path="bookings" element={<AdminBookingsPage />} />
+              <Route path="users" element={<AdminUsersPage />} />
+            </Route>
           </Route>
         </Routes>
       </BrowserRouter>

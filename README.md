@@ -11,6 +11,7 @@
 **Яку проблему вирішує.** Інформація про фітнес-клуб (ціни, розклад, тренери) часто розкидана між соцмережами, дзвінками на рецепцію та паперовими таблицями. Клієнту складно швидко дізнатися, яке тренування коли проходить і чи є місця, а адміністратору — вести облік абонементів і записів.
 
 **Користувачі:**
+
 - **Відвідувач / клієнт** — переглядає абонементи, розклад тренувань, тренерів, записується на тренування.
 - **Адміністратор клубу** — керує абонементами, розкладом, тренерами, клієнтами та записами.
 
@@ -18,11 +19,11 @@
 
 ## Учасники команди
 
-| Учасник | Зона відповідальності |
-|---|---|
+| Учасник             | Зона відповідальності                                |
+| ------------------- | ---------------------------------------------------- |
 | Ромащенко Анастасія | Абонементи (`Memberships`) + Тренування (`Workouts`) |
-| Горбатенко Назар | Клієнти (`Members`) + Тренери (`Trainers`) |
-| Бондаренко Вероніка | Клуб (`Club`) + Записи (`Bookings`) |
+| Горбатенко Назар    | Клієнти (`Members`) + Тренери (`Trainers`)           |
+| Бондаренко Вероніка | Клуб (`Club`) + Записи (`Bookings`)                  |
 
 ## Основні сценарії використання
 
@@ -34,42 +35,42 @@
 
 ## Ресурси API
 
-| Ресурс | Поля | Статус |
-|---|---|---|
-| **Memberships** — абонементи | назва, опис, ціна, тривалість (дні), чи активний | ✅ реалізовано |
+| Ресурс                                      | Поля                                                                                                        | Статус         |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | -------------- |
+| **Memberships** — абонементи                | назва, опис, ціна, тривалість (дні), чи активний                                                            | ✅ реалізовано |
 | **Workouts** — тренування (містять розклад) | назва, опис, тренер, день тижня, час початку, тривалість (хв), рівень складності, макс. кількість учасників | ✅ реалізовано |
-| **Members** — клієнти | ім'я, прізвище, email, телефон, дата народження, активний, абонемент | ✅ реалізовано |
-| **Trainers** — тренери | ім'я, прізвище, email, телефон, спеціалізація, досвід | ✅ реалізовано |
-| **Club** — клуби (філії) | назва, опис, адреса, телефон, email, години роботи | ✅ реалізовано |
-| **Bookings** — записи на тренування | клієнт, тренування, дата заняття, статус (`Confirmed`, `Cancelled`), час створення | ✅ реалізовано |
+| **Members** — клієнти                       | ім'я, прізвище, email, телефон, дата народження, активний, абонемент                                        | ✅ реалізовано |
+| **Trainers** — тренери                      | ім'я, прізвище, email, телефон, спеціалізація, досвід                                                       | ✅ реалізовано |
+| **Club** — клуби (філії)                    | назва, опис, адреса, телефон, email, години роботи                                                          | ✅ реалізовано |
+| **Bookings** — записи на тренування         | клієнт, тренування, дата заняття, статус (`Confirmed`, `Cancelled`), час створення                          | ✅ реалізовано |
 
 ## Endpoints
 
 ### Memberships — `/api/memberships`
 
-| Метод | Маршрут | Опис | Коди відповідей |
-|---|---|---|---|
-| GET | `/api/memberships` | Список абонементів | 200, 400 |
-| GET | `/api/memberships/{id}` | Один абонемент + тренування, що до нього входять | 200, 404 |
-| POST | `/api/memberships` | Створити абонемент | 201, 400, 409 |
-| PUT | `/api/memberships/{id}` | Повністю оновити | 200, 400, 404, 409 |
-| PATCH | `/api/memberships/{id}/status` | Активувати / деактивувати | 200, 400, 404 |
-| DELETE | `/api/memberships/{id}` | Видалити | 204, 404 |
-| POST | `/api/memberships/{id}/workouts/{workoutId}` | Додати тренування в абонемент | 200, 404, 409 |
-| DELETE | `/api/memberships/{id}/workouts/{workoutId}` | Прибрати тренування з абонемента | 204, 404 |
+| Метод  | Маршрут                                      | Опис                                             | Коди відповідей    |
+| ------ | -------------------------------------------- | ------------------------------------------------ | ------------------ |
+| GET    | `/api/memberships`                           | Список абонементів                               | 200, 400           |
+| GET    | `/api/memberships/{id}`                      | Один абонемент + тренування, що до нього входять | 200, 404           |
+| POST   | `/api/memberships`                           | Створити абонемент                               | 201, 400, 409      |
+| PUT    | `/api/memberships/{id}`                      | Повністю оновити                                 | 200, 400, 404, 409 |
+| PATCH  | `/api/memberships/{id}/status`               | Активувати / деактивувати                        | 200, 400, 404      |
+| DELETE | `/api/memberships/{id}`                      | Видалити                                         | 204, 404           |
+| POST   | `/api/memberships/{id}/workouts/{workoutId}` | Додати тренування в абонемент                    | 200, 404, 409      |
+| DELETE | `/api/memberships/{id}/workouts/{workoutId}` | Прибрати тренування з абонемента                 | 204, 404           |
 
 Query-параметри для `GET /api/memberships`: `isActive`, `minPrice`, `maxPrice`, `search`, `workoutId` (абонементи, що включають тренування), `sortBy` (`name` \| `price` \| `duration`), `desc`.
 Приклад: `GET /api/memberships?isActive=true&maxPrice=1000&sortBy=price`
 
 ### Workouts — `/api/workouts`
 
-| Метод | Маршрут | Опис | Коди відповідей |
-|---|---|---|---|
-| GET | `/api/workouts` | Розклад тренувань (пн → нд, за часом) | 200, 400 |
-| GET | `/api/workouts/{id}` | Одне тренування + абонементи, до яких воно входить | 200, 404 |
-| POST | `/api/workouts` | Створити тренування | 201, 400 |
-| PUT | `/api/workouts/{id}` | Повністю оновити | 200, 400, 404 |
-| DELETE | `/api/workouts/{id}` | Видалити | 204, 404 |
+| Метод  | Маршрут              | Опис                                               | Коди відповідей |
+| ------ | -------------------- | -------------------------------------------------- | --------------- |
+| GET    | `/api/workouts`      | Розклад тренувань (пн → нд, за часом)              | 200, 400        |
+| GET    | `/api/workouts/{id}` | Одне тренування + абонементи, до яких воно входить | 200, 404        |
+| POST   | `/api/workouts`      | Створити тренування                                | 201, 400        |
+| PUT    | `/api/workouts/{id}` | Повністю оновити                                   | 200, 400, 404   |
+| DELETE | `/api/workouts/{id}` | Видалити                                           | 204, 404        |
 
 Query-параметри для `GET /api/workouts`: `day` (`Monday`…`Sunday`), `level` (`Beginner` \| `Intermediate` \| `Advanced`), `trainerId`, `membershipId` (тренування, що входять в абонемент), `clubId` (тренування конкретного клубу), `search`, `sortBy` (`schedule` \| `name` \| `duration`), `desc`.
 Приклад: `GET /api/workouts?day=Monday&level=Beginner`, `GET /api/workouts?membershipId=3`
@@ -90,11 +91,11 @@ Query-параметри для `GET /api/workouts`: `day` (`Monday`…`Sunday`)
 }
 ```
 
-
 Query-параметри для `GET /api/workouts/schedule`: `level`, `trainerId`, `membershipId`, `clubId`, `includeEmptyDays` (за замовчуванням `true` — усі 7 днів).
 Приклад: `GET /api/workouts/schedule?level=Beginner&includeEmptyDays=false`
 
 **Правила розкладу** (перевіряються під час `POST` і `PUT`):
+
 - тренер з `trainerId` має існувати → інакше **400**;
 - клуб з `clubId` має існувати → інакше **400**;
 - тренування має закінчитися до 24:00 того ж дня → інакше **400**;
@@ -105,13 +106,13 @@ Query-параметри для `GET /api/workouts/schedule`: `level`, `trainerI
 
 Клуб — це філія фітнес-клубу. У кожної філії власний розклад: тренування прив'язані до клубу через `clubId`.
 
-| Метод | Маршрут | Опис | Коди відповідей |
-|---|---|---|---|
-| GET | `/api/clubs` | Список клубів | 200, 400 |
-| GET | `/api/clubs/{id}` | Один клуб | 200, 404 |
-| POST | `/api/clubs` | Створити клуб (Administrator) | 201, 400, 401, 403, 409 |
-| PUT | `/api/clubs/{id}` | Повністю оновити (Administrator) | 200, 400, 401, 403, 404, 409 |
-| DELETE | `/api/clubs/{id}` | Видалити (Administrator) | 204, 401, 403, 404, 409 |
+| Метод  | Маршрут           | Опис                             | Коди відповідей              |
+| ------ | ----------------- | -------------------------------- | ---------------------------- |
+| GET    | `/api/clubs`      | Список клубів                    | 200, 400                     |
+| GET    | `/api/clubs/{id}` | Один клуб                        | 200, 404                     |
+| POST   | `/api/clubs`      | Створити клуб (Administrator)    | 201, 400, 401, 403, 409      |
+| PUT    | `/api/clubs/{id}` | Повністю оновити (Administrator) | 200, 400, 401, 403, 404, 409 |
+| DELETE | `/api/clubs/{id}` | Видалити (Administrator)         | 204, 401, 403, 404, 409      |
 
 Query-параметри для `GET /api/clubs`: `search` (за назвою, адресою або описом), `sortBy` (`name` \| `address`), `desc`.
 Приклад: `GET /api/clubs?search=Центр&sortBy=name&desc=true`
@@ -130,6 +131,7 @@ Query-параметри для `GET /api/clubs`: `search` (за назвою, �
 ```
 
 **Правила:**
+
 - телефон — у форматі `+380XXXXXXXXX` (13 символів), email — коректного формату → інакше **400**;
 - назва клубу унікальна → дубль дає **409**;
 - клуб, у якому є тренування, видалити не можна → **409**.
@@ -138,14 +140,14 @@ Query-параметри для `GET /api/clubs`: `search` (за назвою, �
 
 Запис — це реєстрація клієнта на тренування в конкретну **дату**. Тренування в розкладі повторюється щотижня (день тижня + час), тому дата заняття зберігається в самому записі. Клуб запису визначається через тренування (`Workout.ClubId`).
 
-| Метод | Маршрут | Опис | Коди відповідей |
-|---|---|---|---|
-| GET | `/api/bookings` | Список записів (User, Administrator) | 200, 400, 401 |
-| GET | `/api/bookings/availability` | Вільні місця на тренування в дату (без входу) | 200, 400, 404 |
-| GET | `/api/bookings/{id}` | Один запис (User, Administrator) | 200, 401, 404 |
-| POST | `/api/bookings` | Записати клієнта на тренування (User, Administrator) | 201, 400, 401, 409 |
-| POST | `/api/bookings/{id}/cancel` | Скасувати запис (User, Administrator) | 200, 400, 401, 404, 409 |
-| DELETE | `/api/bookings/{id}` | Видалити запис остаточно (Administrator) | 204, 401, 403, 404 |
+| Метод  | Маршрут                      | Опис                                                 | Коди відповідей         |
+| ------ | ---------------------------- | ---------------------------------------------------- | ----------------------- |
+| GET    | `/api/bookings`              | Список записів (User, Administrator)                 | 200, 400, 401           |
+| GET    | `/api/bookings/availability` | Вільні місця на тренування в дату (без входу)        | 200, 400, 404           |
+| GET    | `/api/bookings/{id}`         | Один запис (User, Administrator)                     | 200, 401, 404           |
+| POST   | `/api/bookings`              | Записати клієнта на тренування (User, Administrator) | 201, 400, 401, 409      |
+| POST   | `/api/bookings/{id}/cancel`  | Скасувати запис (User, Administrator)                | 200, 400, 401, 404, 409 |
+| DELETE | `/api/bookings/{id}`         | Видалити запис остаточно (Administrator)             | 204, 401, 403, 404      |
 
 Query-параметри для `GET /api/bookings`: `memberId`, `workoutId`, `clubId` (записи на тренування клубу), `status` (`Confirmed` \| `Cancelled`), `dateFrom`, `dateTo`, `sortBy` (`date` \| `createdAt`), `desc`.
 Приклад: `GET /api/bookings?memberId=2&status=Confirmed&sortBy=date`
@@ -164,6 +166,7 @@ Query-параметри для `GET /api/bookings`: `memberId`, `workoutId`, `c
 ```
 
 **Правила запису** (перевіряються в `BookingService` під час `POST`):
+
 - тренування з `workoutId` і клієнт з `memberId` мають існувати → інакше **400**;
 - дата не може бути в минулому → **400**;
 - день тижня дати має збігатися з днем проведення тренування (Йога по понеділках — запис на вівторок неможливий) → **400**;
@@ -180,13 +183,13 @@ Query-параметри для `GET /api/bookings`: `memberId`, `workoutId`, `c
 
 Клієнти містять персональні дані (email, телефон, дата народження), тому **всі** операції доступні лише адміністратору.
 
-| Метод | Маршрут | Опис | Коди відповідей |
-|---|---|---|---|
-| GET | `/api/members` | Список клієнтів | 200, 401, 403 |
-| GET | `/api/members/{id}` | Один клієнт | 200, 401, 403, 404 |
-| POST | `/api/members` | Створити клієнта | 201, 400, 401, 403, 409 |
-| PUT | `/api/members/{id}` | Повністю оновити | 200, 400, 401, 403, 404, 409 |
-| DELETE | `/api/members/{id}` | Видалити | 204, 401, 403, 404, 409 |
+| Метод  | Маршрут             | Опис             | Коди відповідей              |
+| ------ | ------------------- | ---------------- | ---------------------------- |
+| GET    | `/api/members`      | Список клієнтів  | 200, 401, 403                |
+| GET    | `/api/members/{id}` | Один клієнт      | 200, 401, 403, 404           |
+| POST   | `/api/members`      | Створити клієнта | 201, 400, 401, 403, 409      |
+| PUT    | `/api/members/{id}` | Повністю оновити | 200, 400, 401, 403, 404, 409 |
+| DELETE | `/api/members/{id}` | Видалити         | 204, 401, 403, 404, 409      |
 
 Query-параметри для `GET /api/members`: `isActive`, `search` (за ім'ям, прізвищем або email).
 Приклад: `GET /api/members?isActive=true&search=Петренко`
@@ -206,6 +209,7 @@ Query-параметри для `GET /api/members`: `isActive`, `search` (за �
 ```
 
 **Правила:**
+
 - імена — 2–50 символів, email і телефон коректного формату, дата народження обов'язкова → інакше **400**;
 - абонемент з `membershipId` має існувати → інакше **400**;
 - email унікальний (регістр не враховується, зберігається в нижньому регістрі) → дубль дає **409**;
@@ -218,7 +222,6 @@ Query-параметри для `GET /api/members`: `isActive`, `search` (за �
 - Enum-и в JSON передаються рядками (`"Monday"`, `"Beginner"`).
 
 > **Етап 2** — дані зберігаються в реляційній базі даних **SQLite** через **Entity Framework Core** (Code First, міграції). Автентифікація з'явиться на наступних етапах.
-
 
 ## База даних
 
@@ -243,72 +246,72 @@ Workouts * ──── 1 Trainers   (TrainerId; Trainers поки в пам'я�
 
 **Memberships** — абонементи
 
-| Поле | Тип | Обмеження |
-|---|---|---|
-| Id | int | PK |
-| Name | string | обов'язкове, ≤100, унікальне |
-| Description | string? | ≤500 |
-| Price | decimal (у SQLite — REAL) | обов'язкове |
-| DurationDays | int | обов'язкове |
-| IsActive | bool | обов'язкове |
+| Поле         | Тип                       | Обмеження                    |
+| ------------ | ------------------------- | ---------------------------- |
+| Id           | int                       | PK                           |
+| Name         | string                    | обов'язкове, ≤100, унікальне |
+| Description  | string?                   | ≤500                         |
+| Price        | decimal (у SQLite — REAL) | обов'язкове                  |
+| DurationDays | int                       | обов'язкове                  |
+| IsActive     | bool                      | обов'язкове                  |
 
 **Workouts** — тренування (разом з розкладом)
 
-| Поле | Тип | Обмеження |
-|---|---|---|
-| Id | int | PK |
-| Name | string | обов'язкове, ≤100 |
-| Description | string? | ≤500 |
-| TrainerId | int | обов'язкове; стане FK на Trainers |
-| ClubId | int | обов'язкове, FK → Clubs, ON DELETE RESTRICT |
-| DayOfWeek | DayOfWeek (int) | обов'язкове, індекс |
-| StartTime | TimeOnly | обов'язкове |
-| DurationMinutes | int | обов'язкове |
-| Level | enum → string | обов'язкове, ≤20 |
-| MaxParticipants | int | обов'язкове |
+| Поле            | Тип             | Обмеження                                   |
+| --------------- | --------------- | ------------------------------------------- |
+| Id              | int             | PK                                          |
+| Name            | string          | обов'язкове, ≤100                           |
+| Description     | string?         | ≤500                                        |
+| TrainerId       | int             | обов'язкове; стане FK на Trainers           |
+| ClubId          | int             | обов'язкове, FK → Clubs, ON DELETE RESTRICT |
+| DayOfWeek       | DayOfWeek (int) | обов'язкове, індекс                         |
+| StartTime       | TimeOnly        | обов'язкове                                 |
+| DurationMinutes | int             | обов'язкове                                 |
+| Level           | enum → string   | обов'язкове, ≤20                            |
+| MaxParticipants | int             | обов'язкове                                 |
 
 **MembershipWorkouts** — проміжна таблиця, які тренування входять в абонемент
 
-| Поле | Тип | Обмеження |
-|---|---|---|
+| Поле         | Тип | Обмеження                                           |
+| ------------ | --- | --------------------------------------------------- |
 | MembershipId | int | PK (складений), FK → Memberships, ON DELETE CASCADE |
-| WorkoutId | int | PK (складений), FK → Workouts, ON DELETE CASCADE |
+| WorkoutId    | int | PK (складений), FK → Workouts, ON DELETE CASCADE    |
 
 **Clubs** — клуби (філії)
 
-| Поле | Тип | Обмеження |
-|---|---|---|
-| Id | int | PK |
-| Name | string | обов'язкове, ≤100, унікальне |
-| Description | string? | ≤500 |
-| Address | string | обов'язкове, ≤200 |
-| Phone | string | обов'язкове, ≤13 (формат `+380XXXXXXXXX`) |
-| Email | string | обов'язкове, ≤100 |
-| WorkHours | string? | ≤100 (наприклад, `Пн–Нд 07:00–22:00`) |
+| Поле        | Тип     | Обмеження                                 |
+| ----------- | ------- | ----------------------------------------- |
+| Id          | int     | PK                                        |
+| Name        | string  | обов'язкове, ≤100, унікальне              |
+| Description | string? | ≤500                                      |
+| Address     | string  | обов'язкове, ≤200                         |
+| Phone       | string  | обов'язкове, ≤13 (формат `+380XXXXXXXXX`) |
+| Email       | string  | обов'язкове, ≤100                         |
+| WorkHours   | string? | ≤100 (наприклад, `Пн–Нд 07:00–22:00`)     |
 
 **Members** — клієнти
 
-| Поле | Тип | Обмеження |
-|---|---|---|
-| Id | int | PK |
-| FirstName | string | обов'язкове, ≤50 |
-| LastName | string | обов'язкове, ≤50 |
-| Email | string | обов'язкове, ≤100, **унікальне** (нижній регістр) |
-| Phone | string | обов'язкове, ≤20 |
-| BirthDate | DateOnly | обов'язкове |
-| IsActive | bool | обов'язкове |
-| MembershipId | int | обов'язкове, FK → Memberships, ON DELETE RESTRICT |
+| Поле         | Тип      | Обмеження                                         |
+| ------------ | -------- | ------------------------------------------------- |
+| Id           | int      | PK                                                |
+| FirstName    | string   | обов'язкове, ≤50                                  |
+| LastName     | string   | обов'язкове, ≤50                                  |
+| Email        | string   | обов'язкове, ≤100, **унікальне** (нижній регістр) |
+| Phone        | string   | обов'язкове, ≤20                                  |
+| BirthDate    | DateOnly | обов'язкове                                       |
+| IsActive     | bool     | обов'язкове                                       |
+| MembershipId | int      | обов'язкове, FK → Memberships, ON DELETE RESTRICT |
 
 **Bookings** — записи на тренування
 
-| Поле | Тип | Обмеження |
-|---|---|---|
-| Id | int | PK |
-| MemberId | int | обов'язкове, FK → Members, ON DELETE RESTRICT |
-| WorkoutId | int | обов'язкове, FK → Workouts, ON DELETE RESTRICT |
-| Date | DateOnly | обов'язкове, дата заняття |
-| Status | enum → string | обов'язкове, ≤20 (`Confirmed` \| `Cancelled`) |
-| CreatedAt | DateTime | обов'язкове, UTC |
+| Поле      | Тип           | Обмеження                                      |
+| --------- | ------------- | ---------------------------------------------- |
+| Id        | int           | PK                                             |
+| MemberId  | int           | обов'язкове, FK → Members, ON DELETE RESTRICT  |
+| WorkoutId | int           | обов'язкове, FK → Workouts, ON DELETE RESTRICT |
+| Date      | DateOnly      | обов'язкове, дата заняття                      |
+| Status    | enum → string | обов'язкове, ≤20 (`Confirmed` \| `Cancelled`)  |
+| CreatedAt | DateTime      | обов'язкове, UTC                               |
 
 Індекси Bookings: `(WorkoutId, Date)` — швидкий підрахунок зайнятих місць; **унікальний** `(MemberId, WorkoutId, Date)` лише для `Status = 'Confirmed'` — захист від дубля на рівні БД (скасований запис не заважає записатися знову).
 
@@ -348,7 +351,6 @@ dotnet ef migrations list --project FitnessClub.Api
 
 > Файл бази `*.db` не зберігається в Git — у кожного учасника він створюється локально з міграцій.
 
-
 > **Етап 3** — повноцінний REST API: єдиний формат помилок, власні middleware для централізованої обробки винятків і логування запитів, бізнес-правила розкладу, документація Swagger/OpenAPI.
 
 ## Обробка помилок
@@ -364,13 +366,13 @@ dotnet ef migrations list --project FitnessClub.Api
 }
 ```
 
-| Ситуація | Код | Хто обробляє |
-|---|---|---|
-| Невалідні дані в DTO або query-параметрах | **400** | `[ApiController]` + `InvalidModelStateResponseFactory` (поле `errors` зі списком помилок) |
-| Порушення бізнес-правил у даних (тренера не існує тощо) | **400** | `BadRequestException` → middleware |
-| Ресурс не знайдено | **404** | `NotFoundException` → middleware |
-| Конфлікт даних (дублікат назви, перетин розкладу, зв'язок уже існує, порушення обмежень БД) | **409** | `ConflictException` / `DbUpdateException` → middleware |
-| Непередбачена помилка | **500** | middleware: клієнт бачить лише загальне повідомлення і `traceId`, деталі — тільки в лозі сервера |
+| Ситуація                                                                                    | Код     | Хто обробляє                                                                                     |
+| ------------------------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------ |
+| Невалідні дані в DTO або query-параметрах                                                   | **400** | `[ApiController]` + `InvalidModelStateResponseFactory` (поле `errors` зі списком помилок)        |
+| Порушення бізнес-правил у даних (тренера не існує тощо)                                     | **400** | `BadRequestException` → middleware                                                               |
+| Ресурс не знайдено                                                                          | **404** | `NotFoundException` → middleware                                                                 |
+| Конфлікт даних (дублікат назви, перетин розкладу, зв'язок уже існує, порушення обмежень БД) | **409** | `ConflictException` / `DbUpdateException` → middleware                                           |
+| Непередбачена помилка                                                                       | **500** | middleware: клієнт бачить лише загальне повідомлення і `traceId`, деталі — тільки в лозі сервера |
 
 Успішні відповіді: **200** — отримано/оновлено, **201** — створено (із заголовком `Location`), **204** — видалено.
 
@@ -411,29 +413,29 @@ Data          — FitnessClubDbContext, Unit of Work, міграції
 
 Кожен шар знає лише про інтерфейси наступного шару (`IMembershipService`, `IMembershipRepository` тощо), а конкретні реалізації підставляє контейнер Dependency Injection.
 
-| Шар | Компоненти |
-|---|---|
-| Controllers | `MembershipsController`, `WorkoutsController`, `ClubsController`, `BookingsController`, `MembersController`, `TrainersController`, `AuthController`, `UsersController`, `DiagnosticsController` |
-| Services | `MembershipService`, `WorkoutService`, `ClubService`, `BookingService`, `MemberService`, `WorkoutScheduleValidator`, `AuthService`, `JwtTokenService`, `SystemDateTimeProvider` |
-| Repositories | `MembershipRepository`, `WorkoutRepository`, `ClubRepository`, `BookingRepository`, `MemberRepository` (EF Core); `InMemoryTrainerRepository` (у пам'яті) |
-| Models / Entities | `Membership`, `Workout`, `MembershipWorkout`, `Club`, `Booking`, `Member`, `Trainer`, `AppUser` |
-| DTO | `DTOs/Memberships`, `DTOs/Workouts`, `DTOs/Clubs`, `DTOs/Bookings`, `DTOs/Members`, `DTOs/Trainers`, `DTOs/Auth` |
-| Data / Infrastructure | `FitnessClubDbContext`, `UnitOfWork`, `IdentitySeeder`, `Configuraitons/`, `Migrations/`, `Extensions/`, `Middleware/` |
+| Шар                   | Компоненти                                                                                                                                                                                      |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Controllers           | `MembershipsController`, `WorkoutsController`, `ClubsController`, `BookingsController`, `MembersController`, `TrainersController`, `AuthController`, `UsersController`, `DiagnosticsController` |
+| Services              | `MembershipService`, `WorkoutService`, `ClubService`, `BookingService`, `MemberService`, `WorkoutScheduleValidator`, `AuthService`, `JwtTokenService`, `SystemDateTimeProvider`                 |
+| Repositories          | `MembershipRepository`, `WorkoutRepository`, `ClubRepository`, `BookingRepository`, `MemberRepository` (EF Core); `InMemoryTrainerRepository` (у пам'яті)                                       |
+| Models / Entities     | `Membership`, `Workout`, `MembershipWorkout`, `Club`, `Booking`, `Member`, `Trainer`, `AppUser`                                                                                                 |
+| DTO                   | `DTOs/Memberships`, `DTOs/Workouts`, `DTOs/Clubs`, `DTOs/Bookings`, `DTOs/Members`, `DTOs/Trainers`, `DTOs/Auth`                                                                                |
+| Data / Infrastructure | `FitnessClubDbContext`, `UnitOfWork`, `IdentitySeeder`, `Configuraitons/`, `Migrations/`, `Extensions/`, `Middleware/`                                                                          |
 
 ## Dependency Injection
 
 Усі залежності реєструються в `Extensions/ServiceCollectionExtensions.cs`, а `Program.cs` лише викликає `AddDatabase`, `AddApplicationServices`, `AddIdentityAndJwt`, `AddSwaggerWithJwt`. Класи отримують залежності через конструктор і не створюють їх самі через `new`.
 
-| Компонент | Життєвий цикл | Чому |
-|---|---|---|
-| `FitnessClubDbContext` | **Scoped** | Один контекст на HTTP-запит: відстежує зміни лише цього запиту, не потокобезпечний |
-| `IUnitOfWork`, репозиторії EF Core | **Scoped** | Працюють із DbContext, тому живуть стільки ж, скільки він |
-| `IMembershipService`, `IWorkoutService`, `IClubService`, `IBookingService`, `IMemberService`, `IAuthService` | **Scoped** | Залежать від Scoped-репозиторіїв і `UserManager` |
-| `IWorkoutScheduleValidator` | **Transient** | Легкий, без власного стану — новий екземпляр на кожне використання |
-| `ITokenService` (`JwtTokenService`) | **Singleton** | Без стану між запитами, лише читає налаштування JWT; ключ підпису створюється один раз |
-| `IDateTimeProvider` | **Singleton** | Без стану, один на весь застосунок |
-| `ICurrentUser` (`CurrentUser`) | **Scoped** | Читає email і роль користувача з JWT поточного запиту через `IHttpContextAccessor` |
-| `ITrainerRepository` (у пам'яті) | **Singleton** | Дані у списку мають жити, поки працює застосунок |
+| Компонент                                                                                                    | Життєвий цикл | Чому                                                                                   |
+| ------------------------------------------------------------------------------------------------------------ | ------------- | -------------------------------------------------------------------------------------- |
+| `FitnessClubDbContext`                                                                                       | **Scoped**    | Один контекст на HTTP-запит: відстежує зміни лише цього запиту, не потокобезпечний     |
+| `IUnitOfWork`, репозиторії EF Core                                                                           | **Scoped**    | Працюють із DbContext, тому живуть стільки ж, скільки він                              |
+| `IMembershipService`, `IWorkoutService`, `IClubService`, `IBookingService`, `IMemberService`, `IAuthService` | **Scoped**    | Залежать від Scoped-репозиторіїв і `UserManager`                                       |
+| `IWorkoutScheduleValidator`                                                                                  | **Transient** | Легкий, без власного стану — новий екземпляр на кожне використання                     |
+| `ITokenService` (`JwtTokenService`)                                                                          | **Singleton** | Без стану між запитами, лише читає налаштування JWT; ключ підпису створюється один раз |
+| `IDateTimeProvider`                                                                                          | **Singleton** | Без стану, один на весь застосунок                                                     |
+| `ICurrentUser` (`CurrentUser`)                                                                               | **Scoped**    | Читає email і роль користувача з JWT поточного запиту через `IHttpContextAccessor`     |
+| `ITrainerRepository` (у пам'яті)                                                                             | **Singleton** | Дані у списку мають жити, поки працює застосунок                                       |
 
 Правило, якого дотримано: компонент не залежить від компонента з коротшим життєвим циклом (Singleton не отримує Scoped), інакше DbContext «застряг» би між запитами. У режимі Development ASP.NET Core сам перевіряє це під час запуску.
 
@@ -467,10 +469,10 @@ Data          — FitnessClubDbContext, Unit of Work, міграції
 
 ### Ролі
 
-| Роль | Хто | Що може |
-|---|---|---|
-| `User` | кожен зареєстрований користувач | переглядати дані, записуватися на тренування й скасовувати запис, свій профіль `GET /api/auth/me` |
-| `Administrator` | адміністратор клубу | усе, що User, + створювати/змінювати/видаляти абонементи, тренування й клуби, видаляти записи, керувати користувачами |
+| Роль            | Хто                             | Що може                                                                                                               |
+| --------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `User`          | кожен зареєстрований користувач | переглядати дані, записуватися на тренування й скасовувати запис, свій профіль `GET /api/auth/me`                     |
+| `Administrator` | адміністратор клубу             | усе, що User, + створювати/змінювати/видаляти абонементи, тренування й клуби, видаляти записи, керувати користувачами |
 
 Під час першого запуску автоматично створюються обидві ролі та адміністратор з розділу `AdminUser` в `appsettings.json`:
 
@@ -492,27 +494,33 @@ Data          — FitnessClubDbContext, Unit of Work, міграції
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "tokenType": "Bearer",
   "expiresAt": "2026-11-20T20:40:00Z",
-  "user": { "id": "…", "email": "admin@fitnessclub.ua", "firstName": "Адміністратор", "lastName": "Клубу", "roles": ["Administrator", "User"] }
+  "user": {
+    "id": "…",
+    "email": "admin@fitnessclub.ua",
+    "firstName": "Адміністратор",
+    "lastName": "Клубу",
+    "roles": ["Administrator", "User"]
+  }
 }
 ```
 
 ### Доступ до endpoints
 
-| Endpoint | Без входу | User | Administrator |
-|---|---|---|---|
-| `POST /api/auth/register`, `POST /api/auth/login` | ✅ | ✅ | ✅ |
-| `GET /api/auth/me` | 401 | ✅ | ✅ |
-| `GET /api/memberships`, `GET /api/memberships/{id}` | ✅ | ✅ | ✅ |
-| `GET /api/workouts`, `/schedule`, `/{id}` | ✅ | ✅ | ✅ |
-| `POST/PUT/PATCH/DELETE /api/memberships…` | 401 | 403 | ✅ |
-| `POST/PUT/DELETE /api/workouts…` | 401 | 403 | ✅ |
-| `GET /api/clubs`, `GET /api/clubs/{id}` | ✅ | ✅ | ✅ |
-| `POST/PUT/DELETE /api/clubs…` | 401 | 403 | ✅ |
-| `GET/POST/PUT/DELETE /api/members…` | 401 | 403 | ✅ |
-| `GET /api/bookings/availability` | ✅ | ✅ | ✅ |
-| `GET /api/bookings`, `GET /api/bookings/{id}`, `POST /api/bookings`, `POST /api/bookings/{id}/cancel` | 401 | ✅ (лише власні записи) | ✅ (усі) |
-| `DELETE /api/bookings/{id}` | 401 | 403 | ✅ |
-| `GET /api/users`, `PUT /api/users/{id}/role` | 401 | 403 | ✅ |
+| Endpoint                                                                                              | Без входу | User                    | Administrator |
+| ----------------------------------------------------------------------------------------------------- | --------- | ----------------------- | ------------- |
+| `POST /api/auth/register`, `POST /api/auth/login`                                                     | ✅        | ✅                      | ✅            |
+| `GET /api/auth/me`                                                                                    | 401       | ✅                      | ✅            |
+| `GET /api/memberships`, `GET /api/memberships/{id}`                                                   | ✅        | ✅                      | ✅            |
+| `GET /api/workouts`, `/schedule`, `/{id}`                                                             | ✅        | ✅                      | ✅            |
+| `POST/PUT/PATCH/DELETE /api/memberships…`                                                             | 401       | 403                     | ✅            |
+| `POST/PUT/DELETE /api/workouts…`                                                                      | 401       | 403                     | ✅            |
+| `GET /api/clubs`, `GET /api/clubs/{id}`                                                               | ✅        | ✅                      | ✅            |
+| `POST/PUT/DELETE /api/clubs…`                                                                         | 401       | 403                     | ✅            |
+| `GET/POST/PUT/DELETE /api/members…`                                                                   | 401       | 403                     | ✅            |
+| `GET /api/bookings/availability`                                                                      | ✅        | ✅                      | ✅            |
+| `GET /api/bookings`, `GET /api/bookings/{id}`, `POST /api/bookings`, `POST /api/bookings/{id}/cancel` | 401       | ✅ (лише власні записи) | ✅ (усі)      |
+| `DELETE /api/bookings/{id}`                                                                           | 401       | 403                     | ✅            |
+| `GET /api/users`, `PUT /api/users/{id}/role`                                                          | 401       | 403                     | ✅            |
 
 **401 Unauthorized** — токен не передано або він недійсний; **403 Forbidden** — токен дійсний, але роль не дозволяє операцію. Обидві відповіді — у форматі ProblemDetails.
 
@@ -548,26 +556,29 @@ FitnessClub.Api/
 
 Контролери залежать лише від інтерфейсів сервісів (`IMembershipService`, `IWorkoutService`, `IClubService`, `IBookingService`, `IMemberService`, `IAuthService`), сервіси — від інтерфейсів репозиторіїв. Репозиторії будують LINQ-запити (фільтрація, пошук, сортування, `Include` для пов'язаних даних), а EF Core перетворює їх на SQL. Усі операції з базою асинхронні: `ToListAsync`, `FirstOrDefaultAsync`, `AnyAsync`, `SaveChangesAsync`, `ExecuteDeleteAsync`. SQL-запити видно в консолі під час роботи.
 
-
 ## Клієнтський вебінтерфейс
 
 Папка `FitnessClub.Client/` — застосунок на **React + TypeScript** (Vite), який працює з API: запити до сервера та JWT-токен у заголовку `Authorization` (токен зберігається в `localStorage`). Помилки API (ProblemDetails) показуються користувачу текстом від сервера, а не лише кодом.
 
-| Сторінка | Маршрут | Хто бачить |
-|---|---|---|
-| Головна | `/` | усі |
-| Тренування: розклад, вибір дати, вільні місця, запис | `/workouts` | усі (запис — після входу) |
-| Абонементи | `/memberships` | усі |
-| Клуби | `/clubs` | усі |
-| Вхід, реєстрація | `/login`, `/register` | гості |
-| Мої записи: майбутні, історія, скасування (для адміністратора — усі записи) | `/bookings` | User, Administrator |
-| Профіль | `/profile` | User, Administrator |
-| Керування тренуваннями (створення, зміна, видалення) | `/admin/workouts` | лише Administrator |
-| Керування клубами (створення, зміна, видалення) | `/admin/clubs` | лише Administrator |
+| Сторінка                                                                         | Маршрут               | Хто бачить                |
+| -------------------------------------------------------------------------------- | --------------------- | ------------------------- |
+| Головна                                                                          | `/`                   | усі                       |
+| Тренування: розклад, вибір дати, вільні місця, запис                             | `/workouts`           | усі (запис — після входу) |
+| Абонементи                                                                       | `/memberships`        | усі                       |
+| Клуби                                                                            | `/clubs`              | усі                       |
+| Вхід, реєстрація                                                                 | `/login`, `/register` | гості                     |
+| Мої записи: майбутні, історія, скасування (для адміністратора — усі записи)      | `/bookings`           | User, Administrator       |
+| Профіль                                                                          | `/profile`            | User, Administrator       |
+| Керування тренуваннями (створення, зміна, видалення)                             | `/admin/workouts`     | лише Administrator        |
+| Керування клубами (створення, зміна, видалення)                                  | `/admin/clubs`        | лише Administrator        |
+| Керування абонементами (створення, зміна, активація, видалення, склад тренувань) | `/admin/memberships`  | лише Administrator        |
+| Керування клієнтами (пошук, фільтр, створення, зміна, видалення)                 | `/admin/members`      | лише Administrator        |
+| Керування записами (фільтри, запис клієнта, скасування, видалення)               | `/admin/bookings`     | лише Administrator        |
+| Керування користувачами (призначення й зняття ролі адміністратора)               | `/admin/users`        | лише Administrator        |
 
-Інтерфейс змінюється залежно від ролі: пункти меню «Керування …» і маршрути `/admin/…` доступні лише адміністратору (інші перенаправляються на головну), а сторінка записів показує адміністратору записи всіх клієнтів.
+Інтерфейс змінюється залежно від ролі: розділ меню «Адміністрування» і маршрути `/admin/…` доступні лише адміністратору (інші перенаправляються на головну). Адміністратор керує записами всіх клієнтів на сторінці `/admin/bookings`, а кнопка «Записати клієнта» на сторінці «Тренування» відкриває форму запису з уже вибраним тренуванням і датою.
 
-Структура `FitnessClub.Client/src/`: `api/` (запити до API), `contexts/` (автентифікація), `components/` (меню, шапка), `pages/` (сторінки), `utils/` (дати), `App.tsx` (маршрути, захист сторінок).
+Структура `FitnessClub.Client/src/`: `api/` (запити до API), `contexts/` (автентифікація), `components/` (меню, шапка), `pages/` (сторінки; `pages/Admin/` — адміністративні), `utils/` (дати, підписи, тексти помилок), `App.tsx` (маршрути, захист сторінок).
 
 ## Запуск
 
@@ -614,4 +625,3 @@ npm run dev
 
 - **Адміністратор:** `admin@fitnessclub.ua` / `Admin123!`.
 - **Користувач із записами:** зареєструйтесь через `/register` з email клієнта початкових даних (`ivanenko@gmail.com`, `petrenko@gmail.com`). Тоді акаунт пов'язується з клієнтом, і запис на тренування працює.
- 
