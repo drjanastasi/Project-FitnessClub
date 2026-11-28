@@ -21,6 +21,8 @@ import ProfilePage from './pages/Profile/ProfilePage'
 import LoginPage from './pages/Auth/LoginPage'
 import RegisterPage from './pages/Auth/RegisterPage'
 import BookingsPage from './pages/Bookings/BookingsPage'
+import AdminWorkoutsPage from './pages/Admin/AdminWorkoutsPage'
+import AdminClubsPage from './pages/Admin/AdminClubsPage'
 
 import './App.css'
 
@@ -45,6 +47,28 @@ function ProtectedRoute() {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
+  }
+
+  return <Outlet />
+}
+
+function AdminRoute() {
+  const { user, isAuthenticated, isLoading } = useAuth()
+
+  if (isLoading) {
+    return <div className="loading">Завантаження...</div>
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+
+  const isAdmin = user?.roles.some(
+    (role) => role.toLowerCase() === 'administrator',
+  )
+
+  if (!isAdmin) {
+    return <Navigate to="/" replace />
   }
 
   return <Outlet />
@@ -75,6 +99,15 @@ function App() {
             <Route path="/profile" element={<AppLayout />}>
               <Route index element={<ProfilePage />} />
             </Route>
+                      {/* Адміністративні сторінки */}
+          <Route element={<AdminRoute />}>
+            <Route path="/admin/workouts" element={<AppLayout />}>
+              <Route index element={<AdminWorkoutsPage />} />
+            </Route>
+            <Route path="/admin/clubs" element={<AppLayout />}>
+              <Route index element={<AdminClubsPage />} />
+            </Route>
+          </Route>
           </Route>
         </Routes>
       </BrowserRouter>
