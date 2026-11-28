@@ -49,6 +49,22 @@ function Sidebar() {
           <span>⌖</span> Клуби
         </NavLink>
 
+        {isAdmin && (
+          <NavLink to="/admin/workouts" className={({ isActive }) =>
+            `nav-item ${isActive ? 'active' : ''}`
+          }>
+            <span>⚙</span> Керування тренуваннями
+          </NavLink>
+        )}
+
+        {isAdmin && (
+          <NavLink to="/admin/clubs" className={({ isActive }) =>
+            `nav-item ${isActive ? 'active' : ''}`
+          }>
+            <span>⚙</span> Керування клубами
+          </NavLink>
+        )}
+
         {isAuthenticated && (
           <>
             <NavLink to="/bookings" className={({ isActive }) =>
